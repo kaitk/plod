@@ -197,21 +197,50 @@ fn file<S, A, R>(cx: Cx<S, A, R>&, path: const u8[:], body: http::FileBody&, u, 
 // directory, if any; a directory named without the '/' is 404, as no file is,
 // since its page's relative links would resolve against its parent.
 fn files<S, A>(cx: Cx<S, A, http::Router>&, dir: const u8[:], name: const u8[:], body: http::FileBody&, u) {
+    let path = files_path(cx, dir, name);
+    let f, status = http::open_precompressed(cx.req, path);
+    serve_opened(cx, f, status, http::content_type_of(path), body, u);
+}
+
+// Answers as plod::files does, with the files of at most 64 KB kept in the
+// worker's cache, within budget bytes, and sent whole from there
+// (http::serve_cached). Each request checks the file it serves with a stat,
+// and reads it again where it changed. Larger files, and those past the
+// budget, are read from the disk as plod::files reads them.
+fn cached_files<S, A>(cx: Cx<S, A, http::Router>&, dir: const u8[:], name: const u8[:], budget: i64,
+                      body: http::FileBody&, u) {
+    let path = files_path(cx, dir, name);
+    let status = http::serve_cached(cx.req, cx.out, path, http::content_type_of(path), budget, body);
+    file_failed(cx, status);
+    file_sending(cx, u);
+}
+
+// The path in dir that the path parameter name names, for plod::files.
+fn files_path<S, A>(cx: Cx<S, A, http::Router>&, dir: const u8[:], name: const u8[:]) -> u8[>..] {
     var path: u8[>..] = [];
     guard http::file_path(dir, http::param(cx.router, name), path) else { fail(cx, 404, "file_not_found"); }
     if path.len == 0 || path[path.len - 1] == '/' { path.append("index.html"); }
-    let f, status = http::open_precompressed(cx.req, path);
-    serve_opened(cx, f, status, http::content_type_of(path), body, u);
+    return path;
 }
 
 // plod::file's answer for f, which open_file or open_precompressed opened
 // with status.
 fn serve_opened<S, A, R>(cx: Cx<S, A, R>&, f: http::File, status: i32, content_type: const u8[:],
                          body: http::FileBody&, u) {
+    file_failed(cx, status);
+    http::serve_file(cx.req, cx.out, f, content_type, body);
+    file_sending(cx, u);
+}
+
+// Fails the route for a file's status other than 200.
+fn file_failed<S, A, R>(cx: Cx<S, A, R>&, status: i32) {
     if status == 404 { fail(cx, 404, "file_not_found"); }
     if status == 403 { fail(cx, 403, "forbidden"); }
     if status != 200 { fail(cx, 500, "file_unreadable"); }
-    http::serve_file(cx.req, cx.out, f, content_type, body);
+}
+
+// Puts u in cx.state.use for the MORE calls of a file's response still open.
+fn file_sending<S, A, R>(cx: Cx<S, A, R>&, u) {
     guard cx.out.stream.open else { return; }
     cx.state.use = u;
     var x .= cx.ex;

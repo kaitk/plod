@@ -51,7 +51,7 @@ holds.
 | async | `/delay/:ms` with `plod::pause`, which answers from the worker's timer |
 | json-comp, json-tls, json-h2c | `/json/:count` serialized per request with `plod::format_fields`, inside `plod::compressed` |
 | 8gbit | `POST /echo` over TLS, the body sent back with `plod::bytes` |
-| static-tls, static-h2 | `/static/*name` from disk through `plod::files`, which sends a `.br` or `.gz` sibling where `Accept-Encoding` takes it |
+| static-tls, static-h2 | `/static/*name` through `plod::cached_files`, Plod's static handler with goose-http's file cache: a `.br` or `.gz` sibling where `Accept-Encoding` takes it, and each file of up to 64 KB kept in the worker's memory, 1 MiB at most, and checked against the disk with a `stat` on every request, so a replaced file's next answer carries its new bytes. Larger files are read from disk |
 | baseline-h2, baseline-h2c | `/baseline2`, over goose-http's h2 |
 | baseline-h3, static-h3 | `/baseline2` and `/static/*name`, the same routes, over goose-http's HTTP/3 on UDP 8443 (`plod.h3`): its QUIC is written in Goose, its handshake is goose-tls's server and its packet protection libcrypto's, and QPACK uses the static table only. The defaults are goose-http's |
 | async-db | `/async-db` on goose-postgres's async pool, the rows decoded into a struct and serialized with `plod::format_fields` |
@@ -122,5 +122,5 @@ Each is documented configuration, set as the documentation says, not tuning.
   (`plod::take`).
 - Response: `plod::json` serializes a struct, through Goose's standard `json` writer,
   with a field of the route's own where its block adds one (`X-Cache`);
-  `plod::text`, `plod::empty`, and `plod::bytes` answer plain; and `plod::files`
-  serves files.
+  `plod::text`, `plod::empty`, and `plod::bytes` answer plain; and
+  `plod::cached_files` serves files.
