@@ -79,8 +79,8 @@ a program also needs a C compiler and, on Linux, liburing:
 Save this as `hello.goose`:
 
 ```rust
-import http from "github.com/kaitk/goose-http@v0.5.11";
-import plod from "github.com/kaitk/plod@v0.5.8";
+import http from "github.com/kaitk/goose-http@v0.5.12";
+import plod from "github.com/kaitk/plod@v0.5.9";
 
 fn handle(cx) {
     plod::routes(cx) { cx =>

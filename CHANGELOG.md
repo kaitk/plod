@@ -3,6 +3,26 @@
 What each tag adds. Each release names the Goose compiler it was built and tested with.
 Plod was named goose-rest up to `v0.3.4`; the entries before `v0.4.0` keep that name.
 
+## v0.5.9 (2026-10-24)
+
+Goose `v2026.3`, goose-http `v0.5.12`, goose-compress `v0.1.4`; `plod.websocket`
+declares goose-hash `v0.0.4`, and `plod.tls` and `plod.h3` goose-tls `v0.0.6`. No
+breaking changes.
+
+Added:
+
+- `plod::cached_files`: `plod::files`'s answer, with files of up to 64 KB kept in the
+  worker's memory within a byte budget, and checked against the disk with a `stat` on
+  every request, over goose-http's `http::serve_cached`
+  ([reference](docs/reference.md#4-later-calls)). The HttpArena entry
+  serves `/static/` with it: static-h2 +60% requests a second
+  ([task 062](tasks/062-static-files.md#results)).
+
+Changed:
+
+- goose-http `v0.5.12`: `plod.h3`'s HTTP/3 probes each connection for 1,452-byte
+  datagrams.
+
 ## v0.5.8 (2026-10-24)
 
 Goose `v2026.3`, goose-http `v0.5.11`, goose-compress `v0.1.4`; `plod.websocket`
