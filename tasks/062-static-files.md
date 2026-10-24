@@ -148,6 +148,11 @@ HttpArena's staleness probe, by hand on a copy of the files: `app.js` and its `.
 `identity`, each answer after the replacement carried the new bytes, and each after
 the restore the old.
 
+HttpArena's `validate.sh` at its `main` (`2454978`), on the entry built from these
+branches and goose-http's (local imports, `-O3 -march=native` in its image), from a
+container in WSL under Docker Desktop: 146 passed, 0 failed, with static-tls's file and
+variant staleness probes ("served in 0s, original back in 0s") and both h3 checks.
+
 Tests: goose-http's `test/http/file_cache.goose` (a file read in, a range of it, a
 replacement by `rename` at the same length, a `.br` copy, the budget full, and a file
 past 64 KB), and Plod's `test/pieces/files.goose`, whose cases now run through both
