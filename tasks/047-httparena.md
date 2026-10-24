@@ -73,6 +73,15 @@ Beside them on the same setup: zix-http3 1.86 M and 53.9 K, Aegon at its entry's
 "Comparisons"). The comment that asks for the run is `/benchmark -f plod --save`, as
 HttpArena's pull request template gives it.
 
+The owner ran `/benchmark --save` at 14:17 UTC on 2026-10-24, on the fork's `plod` at
+`29c0051c` (`v0.5.8`, rebased onto HttpArena's `main`). Both requests waited for a
+runner, and when they started, at 15:08 and 15:12, aborted with "`main` has diverged
+and cannot be auto-merged", and no results: `main` had moved at 15:07 (ktron,
+[#1637](https://github.com/MDA2AV/HttpArena/pull/1637)). The pre-check fetches `main`
+with `--depth=1`, so the branch must contain `main`'s latest commit when the run
+starts, not when it's asked for. A merge of `main` into `plod`, which pushes as a
+fast-forward, is the next step before asking again.
+
 Done after the review (2026-10-24): Plod `v0.5.6` writes `format_fields`' JSON through
 Goose's `json` writer and adds `plod::bytes` and `plod::field`, which `/echo` and
 production-stack's `X-Cache` now use; gateway-h3's edge is stock nginx with its HTTP/3;
@@ -85,7 +94,7 @@ echo-ws-pipeline, and pipelined; fourth on baseline. Where it scores low:
 
 | Profile | Score of 1,000 | Why |
 |---|---:|---|
-| static-h2 | about 350 | `plod::files` opens and reads each file per request, at about 160 µs of CPU a request; the leaders get about 1.1 M against 392 K. The rules allow a cache that is the framework's own and follows the disk (`add-framework/implementation-rules/frameworks/standard.md`). Whether one pays is task 062 |
+| static-h2 | about 350 | `plod::files` opens and reads each file per request, at about 160 µs of CPU a request; the leaders get about 1.1 M against 392 K. The rules allow a cache that is the framework's own and follows the disk (`add-framework/implementation-rules/frameworks/standard.md`). Task 062 found that the opens and reads were most of it, and adds `plod::cached_files`: +60% on static-h2 locally, unreleased |
 | gateway-h3 | about 490 | Caddy at the edge. The stock `nginx:1.27-alpine` image, which `proxy/` already uses, has `--with-http_v3_module` (checked with `nginx -V`), so the README's reason for Caddy was wrong; anole's stock nginx edge gets 162 K, where aspnet-minimal_caddy's and libuvcpp's Caddy edges get 69 K and 74 K, and the entry's 79 K. Now stock nginx, unmeasured |
 | json-comp | about 910 | gzip only, at level 1, 1,438 bytes a response against the leader's 1,225: the score scales by the square of that ratio, ×0.73 |
 
