@@ -79,8 +79,9 @@ runner, and when they started, at 15:08 and 15:12, aborted with "`main` has dive
 and cannot be auto-merged", and no results: `main` had moved at 15:07 (ktron,
 [#1637](https://github.com/MDA2AV/HttpArena/pull/1637)). The pre-check fetches `main`
 with `--depth=1`, so the branch must contain `main`'s latest commit when the run
-starts, not when it's asked for. A merge of `main` into `plod`, which pushes as a
-fast-forward, is the next step before asking again.
+starts, not when it's asked for. The fork's `plod` then took Plod `v0.5.9` (goose-http
+`v0.5.12`, with the static file cache) and a merge of `main` at `2454978`, pushed as a
+fast-forward (`dc9307b0`), and the run was asked for again.
 
 Done after the review (2026-10-24): Plod `v0.5.6` writes `format_fields`' JSON through
 Goose's `json` writer and adds `plod::bytes` and `plod::field`, which `/echo` and

@@ -1,8 +1,8 @@
 # 062: Static files, and whether a cache pays
 
-Status: in progress (2026-10-24): built and measured; the release and the board's
-numbers are left. Where the time
-of a static file over TLS goes in `plod::files`, and, if reading the disk is it, a file
+Status: in progress (2026-10-24): released in Plod `v0.5.9` over goose-http `v0.5.12`,
+and in the entry on the pull request; the board's numbers are left. Where the time of
+a static file over TLS goes in `plod::files`, and, if reading the disk is it, a file
 cache in goose-http that a program chooses where it calls `plod::files`, bounded, and
 following the disk. Reading the disk was most of it: `plod::cached_files`, over
 goose-http's `http::serve_cached`, answers static-h2 60% faster ("Results").
