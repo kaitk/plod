@@ -8,21 +8,16 @@ Plod is a REST framework for [Goose](https://github.com/aardappel/goose), built 
 [goose-http](https://github.com/kaitk/goose-http). It follows Actix's model, adapted to
 Goose, with no overhead over a hand-written router wherever the language allows.
 An optional generator writes types, JSON readers and writers, and a router from an
-OpenAPI document. Its mascot is Ari, a banana slug, and the name is a joke that the
-[benchmarks](#benchmarks) explain.
+OpenAPI document. Its mascot is Ari (genus [Ariolimax](https://en.wikipedia.org/wiki/Banana_slug)), a banana slug.
 
 The API is still taking shape. The tutorial and examples use the intended API, but
-names and details may change between tags. Work is also underway to reduce the
-remaining overhead over goose-http.
+names and details may change between tags. Work is also underway particularily on the "batteries included parts" like database integration.
 
 [Tutorial](docs/tutorial/README.md) · [Best practices](docs/best-practices/README.md) ·
 [Reference](docs/reference.md) ·
 [Generator](docs/generator.md) · [Benchmarks](docs/benchmarks.md) ·
 [Architecture](docs/architecture.md) · [Development](docs/development.md) ·
 [Changelog](CHANGELOG.md)
-
-*Note: Plod was named goose-rest before `v0.4.0`. GitHub redirects `kaitk/goose-rest`
-to `kaitk/plod`, so imports of earlier tags still build.*
 
 ## Status
 
