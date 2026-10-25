@@ -288,7 +288,11 @@ column in the README's table.
 `bench/rest.sh run`, `STEPS=1`, one round of 2 s warm-up and 5 s, Plod on io_uring at
 goose-http `v0.5.8` (Plod's pin then) against viltrum `v1.5.1`, each with 4 workers on
 CPUs 0-3 and wrk on 4-15, on the desktop above. Requests a second, the server's CPU
-time a request, and peak RSS; every check passed.
+time a request, and peak RSS; every check passed. The full run, three rounds of 15 s
+at the nightly's fixed rates beside session `2026-10-25T2003`, is in
+`docs/benchmarks.md` and the README's table, where viltrum replaces Axum (2026-10-25).
+It agrees with this one within 3.1% on every rate; viltrum's peak RSS on B templated
+was 927 MB there.
 
 | Tier | Plod | viltrum | Plod ÷ viltrum |
 |---|---|---|---:|
@@ -364,5 +368,6 @@ a wrk script that sends 16 `GET /pipeline` requests per write.
 - [x] `bench/rest/viltrum/` serves every tier, passes both checkers, and has a
       `NOTES.md`; `agents/benchmarks.md` and `bench/README.md` list it. Tier D fails
       the declared-length check, as Aegon's does (2026-10-24)
-- [ ] The REST tiers measured on the desktop, in `docs/benchmarks.md` and the README
+- [x] The REST tiers measured on the desktop, in `docs/benchmarks.md` and the README
+      (2026-10-25)
 - [ ] Each idea in step 7 taken or recorded as left, with the measurement

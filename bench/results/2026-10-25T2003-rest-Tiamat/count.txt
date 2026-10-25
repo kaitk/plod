@@ -1,0 +1,38 @@
+== TIER=a /api/items/1
+server	run	user instructions/req	user cycles/req	req/s
+restc-http	1	4150.9	1525.6	1052900
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	4227.7	1620.0	987206
+== TIER=a /api/me
+server	run	user instructions/req	user cycles/req	req/s
+restc-http	1	3639.9	1173.4	1208627
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	4011.7	1468.5	1079376
+== TIER=a /nothing
+server	run	user instructions/req	user cycles/req	req/s
+restc-http	1	2621.9	988.8	1300189
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	3178.7	1233.5	1196489
+== TIER=m /api/items/1
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	5324.8	1930.1	913077
+== TIER=f /
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	2414.3	933.4	1333691
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	2330.3	958.7	1301614
+== TIER=f /id/1?name=bun
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	2989.3	1170.5	1204555
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	3268.3	1231.1	1188334
+== TIER=r /authorizations
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	3125.6	1385.2	1125504
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	2692.6	735.8	1422692
+== TIER=r /user/keys/id201
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	39023.6	12695.9	258298
+server	run	user instructions/req	user cycles/req	req/s
+restc-plod	1	3159.6	915.1	1310964
