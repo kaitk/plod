@@ -56,7 +56,8 @@ pass their tests on arm64 Linux. It provides:
 - **Bodies and responses of any size**, in pieces as they arrive or are sent, files
   with ranges and conditional requests, and SSE
   ([reference](docs/reference.md#4-later-calls)).
-- **Middleware**, inlined into the handler: CORS, bearer tokens, Server-Timing and an
+- **Middleware**, inlined into the handler: CORS, bearer tokens and JWTs signed with
+  HS256, Server-Timing and an
   access log, security headers, compression (gzip, deflate, zstd), and any
   `inline fn` of your own that takes a block
   ([reference](docs/reference.md#2-middleware)).
@@ -71,9 +72,9 @@ Planned:
 
 - Database integration, over goose-postgres and goose-sqlite.
 - An OpenAPI document from the routes.
-- JWT, sessions, and rate limiting. Until then, verify tokens yourself behind the
-  bearer middleware, read cookies with `plod::cookie`, and rely on goose-http's
-  per-connection limits.
+- JWTs signed with RS256 and ES256, and JWKS.
+- Sessions and rate limiting. Until then, read cookies with `plod::cookie`, and rely
+  on goose-http's per-connection limits.
 - HTTP/3 for routes that wait. It works today for routes that answer at once.
 
 ## Packages
@@ -86,7 +87,7 @@ Plod and its optional modules use these Goose packages, each in a repository of 
 | [goose-tls](https://github.com/kaitk/goose-tls) | A TLS 1.3 server in Goose, and a client, over OpenSSL 3 | `plod.tls` |
 | [goose-acme](https://github.com/kaitk/goose-acme) | Certificates from Let's Encrypt or any ACME CA, through TLS-ALPN-01 | HTTPS without a proxy |
 | [goose-compress](https://github.com/kaitk/goose-compress) | gzip, deflate, and zstd encoders, whole or streamed | `plod.compression` |
-| [goose-hash](https://github.com/kaitk/goose-hash) | SHA-1, SHA-256, HMAC, PBKDF2, and secure random bytes | `plod.websocket`'s handshake |
+| [goose-hash](https://github.com/kaitk/goose-hash) | SHA-1, SHA-256, HMAC, PBKDF2, and secure random bytes | `plod.websocket`'s handshake, and `plod.jwt` |
 | [goose-postgres](https://github.com/kaitk/goose-postgres) | The PostgreSQL protocol, with pipelined queries and no I/O of its own | A lane's database |
 | [goose-sqlite](https://github.com/kaitk/goose-sqlite) | SQLite, built from the amalgamation it carries | A lane's database, or a route's |
 

@@ -57,7 +57,7 @@ Work can start at any point unless the table says otherwise.
 | 036: parameters in a scope's prefix | Research; the best practices' member audience waits on it. |
 | 037: data compiled into the binary | Spike. |
 | 034: middleware stacks | Built; whether the generator takes a program's stack per security scheme. |
-| 035: best practices | Built; the testing page, then data access and a full example once there are database helpers and JWT. |
+| 035: best practices | Built; the testing page, then data access and a full example once there are database helpers (JWT has HS256 since 2026-10-27). |
 | 027: a helper over the shared store | Deferred until a program needs it. |
 | 022: OpenAPI output | Planned for later. |
 | 043: workers started with `http::run` | Done on a pinned Goose commit; the README waits for releases. |
@@ -68,7 +68,7 @@ Work can start at any point unless the table says otherwise.
 | 053: a contained scope in Goose | A design note only; it builds on task 051, cancelled on 2026-10-21, so it waits until restarts are pursued. |
 | 048: Aegon in the REST benchmark | Built and checked on the desktop, without tier D; the nightly run measures it. |
 | 061: viltrum | goose-http's tasks 065 and 066 are on Plod's pin, and viltrum runs in `bench/httparena.sh` and the REST tiers; its "Next" lists what's left: ring entries, the router gap, once-campfire. |
-| 056: what to take from Aegon | Verdicts set; seventeen subtasks. 01, shorter routes, is merged as skip-based routing with block scopes; tier M's count on Linux and a full `bench/routes.sh` run are todo. 02 to 08 are small and can run beside goose-http's TLS and h2 work; 16 and 17 wait on 052. 05 (JWT) unblocks 035's full example and parts of 047. |
+| 056: what to take from Aegon | Verdicts set; seventeen subtasks. 01, shorter routes, is merged as skip-based routing with block scopes; tier M's count on Linux and a full `bench/routes.sh` run are todo. 02 to 08 are small and can run beside goose-http's TLS and h2 work; 16 and 17 wait on 052. 05 (JWT) has HS256 in `plod.jwt`; RS256, ES256, and JWKS wait on goose-tls. |
 | 055: a documentation site | Any time; at `kaitk.github.io/plod`. |
 | 049: ACME | Unblocked: `rest.tls` serves with a chooser (`v0.3.3`), and a goose-rest server got and renewed a Pebble certificate by hand; goose-acme `v0.0.3` reaches Let's Encrypt's staging service. The chooser fed by mail from the ACME lane, a committed Pebble run, and a staging certificate remain. |
 | 013: embedded aarch64 | Waits on an x86-64 host and a board. |

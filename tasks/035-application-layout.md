@@ -21,7 +21,7 @@ domain and moves out once a second one needs it (snowtime's `AGENTS.md`).
 Its pages show the conventions with short excerpts, not a whole application: one built
 now would fake its data access and authentication, the parts a layout most needs to
 show. A full example application waits until goose-rest has database helpers and a JWT
-implementation (2026-10-15). Each page's excerpts come from a small program of its
+implementation (2026-10-15); `plod.jwt` gives HS256 (2026-10-27). Each page's excerpts come from a small program of its
 own, checked as the tutorial's are, so they keep compiling.
 
 The conventions stick best where tooling follows them, as Rails's and Phoenix's

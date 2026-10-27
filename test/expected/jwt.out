@@ -1,0 +1,46 @@
+rfc 7515 A.1: iss joe, exp 1300819380, is_root true
+rfc 7515 A.1, at exp + leeway - 1: ok
+rfc 7515 A.1, at exp + leeway: expired
+rfc 7515 A.1, no leeway, at exp: expired
+rfc 7515 A.1, another secret: signature
+signed, kid, ttl, own claim: as Python signs it
+signed, no kid, no claims of its own: as Python signs it
+signed, verified: sub ada, aud api, jti j1, iat 1000, nbf 1000, exp 1060
+signed now: dated true, jti of 22 characters
+signed now: ok
+kid k1 among k1, k2: ok
+kid k1 among k2: key not found
+kid k1 against k3, same secret: key not found
+no kid, one key: ok
+no kid, two keys: key not found
+no kid, no keys: key not found
+alg none, no signature: algorithm
+alg HS512: algorithm
+alg absent: algorithm
+crit: malformed
+HS256, no claims to check: ok
+a signature's byte changed: signature
+another payload, the same signature: signature
+signature cut short: signature
+empty: malformed
+one part: malformed
+two parts: malformed
+four parts: malformed
+padding: malformed
+standard alphabet: malformed
+header not JSON: malformed
+payload an array: malformed
+payload not JSON: malformed
+exp a string: malformed
+exp negative: malformed
+exp 1000.9, no leeway, at 999: ok
+exp 1000.9, no leeway, at 1000: expired
+nbf 2000, at nbf - leeway - 1: not yet valid
+nbf 2000, at nbf - leeway: ok
+iss plod, wanted plod: ok
+iss plod, wanted other: issuer
+no iss, wanted plod: issuer
+aud [web, api], wanted api: ok
+aud [web, api], wanted cli: audience
+no aud, wanted api: audience
+aud a number: malformed

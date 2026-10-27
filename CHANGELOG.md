@@ -3,6 +3,15 @@
 What each tag adds. Each release names the Goose compiler it was built and tested with.
 Plod was named goose-rest up to `v0.3.4`; the entries before `v0.4.0` keep that name.
 
+## Unreleased
+
+Added:
+
+- `plod.jwt`, a module `plod` doesn't import, over goose-hash: `plod::jwt_bearer`,
+  `plod::jwt_verify`, and `plod::jwt_sign`, for JWTs signed with HS256, with the
+  algorithm fixed by the verifier, keys chosen by `kid`, and `exp`, `nbf`, `iss`, and
+  `aud` checked ([reference](docs/reference.md#23-jwt)).
+
 ## v0.5.9 (2026-10-24)
 
 Goose `v2026.3`, goose-http `v0.5.12`, goose-compress `v0.1.4`; `plod.websocket`

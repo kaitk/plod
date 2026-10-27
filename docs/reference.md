@@ -240,6 +240,7 @@ can have its own, and a public route none.
 | `plod::security_headers(cx, cfg) { ... }` | Adds a prepared security policy to every answer inside, errors included. HTML and API presets, configurable per scope: [Security headers](#22-security-headers). |
 | `plod::compressed(cx) { cx => ... }` | Compresses the answers inside, errors included, by the request's `Accept-Encoding`, with goose-http's gzip, deflate, and zstd. An optional module: [Compression](#21-compression). |
 | `plod::bearer(cx) { token => ... }` | Fails 401 `unauthenticated` with `WWW-Authenticate: Bearer` without a bearer token; `plod::invalid_token(cx)` refuses one. `plod::bearer_token(cx)` returns it, for a generated router's security check. |
+| `plod::jwt_bearer(cx, keys, check) { t => ... }` | `bearer`, with the token verified as an HS256 JWT and its claims in `t`. An optional module: [JWT](#23-jwt). |
 
 `timed`, `cors`, `security_headers`, and `compressed` work on either side of
 `plod::routes`. Around it, every answer gets their fields, the 404s outside every
@@ -471,6 +472,70 @@ outer common fields, it first copies those fields and the policy into scratch.
 It validates and formats no fields during a request. Deferred responses retain
 fields through `keep_fields`, copying to scratch first only if needed. This adds
 no bytes to the connection's request state.
+
+### 2.3 JWT
+
+`plod::jwt_bearer`, `plod::jwt_verify`, and `plod::jwt_sign` are in the module
+`plod.jwt`, which `plod` doesn't import, so a program without it builds without
+goose-hash. They sign and verify JSON Web Tokens (RFC 7519) with HS256 only. To use
+them, declare goose-hash in the root file at the tag `jwt.goose` names, and import the
+module:
+
+```rust
+import http from "github.com/kaitk/goose-http@v0.5.12";
+import hash from "github.com/kaitk/goose-hash@v0.0.4";
+import plod from "github.com/kaitk/plod@<tag>";
+import plod.jwt;
+
+let KEYS = [plod::JwtKey { kid: "2026-10", secret: SECRET }];
+
+fn me(cx) {
+    plod::jwt_bearer(cx, KEYS, plod::JwtCheck { issuer: "plod", audience: "api" }) { t =>
+        guard !revoked(cx.app, t.jti) else { plod::invalid_token(cx); }
+        plod::text(cx, 200, t.sub);
+    };
+}
+```
+
+| Call | Does |
+|---|---|
+| `plod::jwt_bearer(cx, keys, check) { t => ... }` | `plod::bearer` with the token verified by `jwt_verify`: no token fails 401 `unauthenticated`, and a token it refuses fails 401 `invalid_token`. Goes inside `plod::routes`, as `bearer` does. |
+| `plod::jwt_verify(token, keys, check) { t => ... }` | Runs the block with the token's claims, a `plod::Jwt`, and returns `plod::JwtError.None`; otherwise returns why not, without running the block. |
+| `plod::jwt_sign(out, key, claims, ttl) { p => ... }` | Appends a token signed with `key`. The block appends the program's own claims to the payload `p`, with `json::format_key` and json's writer, separated by commas. `{ p => }` adds none. |
+
+What `jwt_verify` checks, in order, and the `JwtError` each refusal returns:
+
+| Check | Refused with |
+|---|---|
+| Three base64url parts without padding, a header and a payload that are JSON objects, and dates that are numbers of seconds from 1970 on | `Malformed` |
+| The header has no `crit`: the extensions it names aren't supported | `Malformed` |
+| The header's `alg` is `HS256`. The verifier fixes the algorithm, so `none` and every other `alg` are refused | `Algorithm` |
+| A key: the one whose `kid` is the header's. A token without `kid` takes the only key, and is refused when there are several | `KeyNotFound` |
+| The MAC: HMAC-SHA-256 over the header and payload as sent, compared in constant time | `Signature` |
+| `exp`: the time is before `exp` plus `check.leeway`, 60 seconds by default | `Expired` |
+| `nbf`: the time plus the leeway is `nbf` or later | `NotYetValid` |
+| `check.issuer`, when set, is `iss` | `Issuer` |
+| `check.audience`, when set, is `aud`, or one of its strings | `Audience` |
+
+`check.now`, when not 0, stands for the clock, for tests. `exp`, `nbf`, and `iat` are
+optional, as RFC 7519 makes them: a token without `exp` never expires, so a program
+that requires one checks `t.exp >= 0`.
+
+`plod::Jwt` holds the registered claims, `iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, and
+`iat`, as `""` or `-1` where a token has none. `aud` is the audience that matched, or
+the token's `aud` when that's one string. `payload` is the payload's JSON, which the
+program reads its own claims from with `json::reader`. The strings are slices of a
+buffer that lasts as long as the block. Revoking a token is the program's check: look
+up `t.jti` in the block and call `plod::invalid_token(cx)`.
+
+`jwt_sign` writes `{"alg":"HS256","typ":"JWT"}`, with the key's `kid` when it has one.
+In the payload, `iat` is the clock where the claims have none, `nbf` is `iat`, `jti` is
+16 random bytes in base64url, and `exp` is `iat + ttl` where the claims have none and
+`ttl` is positive.
+
+Not supported yet: RS256, PS256, and ES256, which need public-key signatures, and
+JWKS, which publishes public keys. HS384 and HS512 need SHA-512, which goose-hash
+doesn't have.
 
 ## 3. Extractors
 

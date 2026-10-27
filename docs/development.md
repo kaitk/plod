@@ -23,6 +23,7 @@ middleware.goose  CORS, bearer, timed, and scope
 waiting.goose     lanes of jobs: ask one, run its jobs, and resume with its reply
 compression.goose plod::compressed, a module plod doesn't import (goose-compress)
 websocket.goose   plod::ws_upgrade and ws_read, a module plod doesn't import (goose-hash)
+jwt.goose         plod::jwt_bearer, jwt_verify, and jwt_sign, a module plod doesn't import (goose-hash)
 tls.goose         plod::serve over HTTPS, a module plod doesn't import (goose-tls)
 check.goose       what generated code calls: code points, string formats, numbers
 gen/              plod gen, the generator (gen/main.goose)
