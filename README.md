@@ -242,7 +242,7 @@ Goose uses io_uring. Results for every server, both Goose event loops, and memor
 
 ## Prior art
 
-Plod builds on ideas from these projects:
+Plod takes ideas and direct inspiration from these projects:
 
 - **[Tina](https://github.com/pmbanugo/tina)**, a thread-per-core framework in Odin:
   the original design that goose-http grew from, and that Plod inherits. A loop per
@@ -257,11 +257,19 @@ Plod builds on ideas from these projects:
   response writer that copies only declared fields. Goose's compiler does at build time
   what Elysia generates at run time or in its AOT build
   ([architecture](docs/architecture.md#the-generator)).
-- **[Aegon](https://github.com/UdayKhare09/Aegon)**, a C++ framework: much of the
-  feature list. Its guide served as the checklist for what a framework should offer.
-  RFC 9457 errors, the security-header presets, and the shorter route declarations come
-  from it, and so do the plans for JWT, more auth schemes, and a data layer.
+- **[Aegon](https://github.com/UdayKhare09/Aegon)**, a C++ framework: direct
+  inspiration for much of Plod's API design, middleware, and feature set. Its guide
+  served as the checklist for what a framework should offer. RFC 9457 errors, the
+  security-header presets, and the shorter route declarations come from it, and so do
+  the plans for JWT, more auth schemes, and a data layer.
 - **[HttpArena](https://github.com/MDA2AV/HttpArena)** and its entries: smaller
   optimizations, each measured before it was taken.
   [viltrum](https://github.com/Tuntii/viltrum) (V) led goose-http to timers on the
   precise clock and timer tables that grow with use.
+
+## License
+
+Licensed under either of the [Apache License, Version 2.0](LICENSE-APACHE) or the
+[MIT license](LICENSE-MIT), at your option. Unless you state otherwise, any
+contribution you submit for inclusion, as defined in the Apache-2.0 license, is
+licensed the same way, without any additional terms or conditions.
