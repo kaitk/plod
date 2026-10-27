@@ -4,61 +4,91 @@
 
 *Takes its time, not yours.*
 
+[![HTTP Arena H/1.1](https://img.shields.io/endpoint?url=https://http-arena.com/badge/plod/h1.json)](https://http-arena.com/#type=experimental&tuned=0)
+[![HTTP Arena H/2](https://img.shields.io/endpoint?url=https://http-arena.com/badge/plod/h2.json)](https://http-arena.com/#scope=h2&type=experimental&tuned=0)
+[![HTTP Arena WebSocket](https://img.shields.io/endpoint?url=https://http-arena.com/badge/plod/ws.json)](https://http-arena.com/#scope=ws&type=experimental&tuned=0)
+[![HTTP Arena H/3](https://img.shields.io/endpoint?url=https://http-arena.com/badge/plod/h3.json)](https://http-arena.com/#scope=h3&type=experimental&tuned=0)
+[![Discord](https://img.shields.io/badge/Discord-Goose-5865F2?logo=discord&logoColor=white)](https://discord.gg/397eZdbnsR)
+
 Plod is a REST framework for [Goose](https://github.com/aardappel/goose), built on
 [goose-http](https://github.com/kaitk/goose-http). It follows Actix's model, adapted to
 Goose, with no overhead over a hand-written router wherever the language allows.
 An optional generator writes types, JSON readers and writers, and a router from an
 OpenAPI document. Its mascot is Ari (genus [Ariolimax](https://en.wikipedia.org/wiki/Banana_slug)), a banana slug.
 
-The API is still taking shape. The tutorial and examples use the intended API, but
-names and details may change between tags. Work is also underway particularily on the "batteries included parts" like database integration.
+**The API isn't final.** Goose is still evolving, and Plod follows it: a feature such as
+the [proposed coroutines](https://github.com/bitspittle/goose/blob/suspend-fn-proposal/docs/design/suspend_fn.md)
+could change how routes are written. Larger redesigns like that will come together, in
+a major version.
+
+Plod is ready to try out and build prototypes with, but not yet for production: the
+batteries a production service needs, such as database integration, are still to come.
 
 [Tutorial](docs/tutorial/README.md) · [Best practices](docs/best-practices/README.md) ·
 [Reference](docs/reference.md) ·
 [Generator](docs/generator.md) · [Benchmarks](docs/benchmarks.md) ·
 [Architecture](docs/architecture.md) · [Development](docs/development.md) ·
-[Changelog](CHANGELOG.md)
+[Changelog](CHANGELOG.md) · [Packages](#packages)
+
+Questions and ideas are welcome in
+[Plod's channel](https://discord.com/channels/1559977219663732797/1563955365249425458)
+on the Goose Discord.
+
+Plod follows the
+[half-sync/half-async](https://www.dre.vanderbilt.edu/~schmidt/PDF/PLoP-95.pdf) model,
+meaning [**routes should never block their worker**](#routes-dont-block).
 
 ## Status
 
 Plod builds wherever goose-http does: Linux, macOS, and Windows. Its examples also
-pass their tests on arm64 Linux.
+pass their tests on arm64 Linux. It provides:
 
-🟢 works · 🟡 partial · ⚪ not yet · 🔴 out of scope
+- **Routes and scopes**: path parameters, 404, 405, and `OPTIONS`, and prefixes with
+  their own middleware ([reference](docs/reference.md#1-context-and-routes)).
+- **Extractors**: path, query, header, and cookie parameters, JSON, URL-encoded and
+  multipart forms, and your own types ([reference](docs/reference.md#3-extractors)).
+- **Work that waits**: jobs on lanes, with the route resumed at the reply
+  ([tutorial](docs/tutorial/11-waiting.md)), and goose-http's
+  [HTTP client](https://github.com/kaitk/goose-http/blob/main/docs/api.md#an-http-client)
+  on a lane.
+- **Errors** as JSON, in your own format, or as RFC 9457
+  ([reference](docs/reference.md#5-errors)).
+- **Bodies and responses of any size**, in pieces as they arrive or are sent, files
+  with ranges and conditional requests, and SSE
+  ([reference](docs/reference.md#4-later-calls)).
+- **Middleware**, inlined into the handler: CORS, bearer tokens, Server-Timing and an
+  access log, security headers, compression (gzip, deflate, zstd), and any
+  `inline fn` of your own that takes a block
+  ([reference](docs/reference.md#2-middleware)).
+- **WebSocket and HTTPS**, in optional modules: TLS 1.3, with h2 or HTTP/1.1 by ALPN
+  ([reference](docs/reference.md#13-https)).
+- **OpenAPI 3.1 in**: types, readers, writers, and a router
+  ([generator](docs/generator.md)).
+- **Testing** with `plod::serve_one`, without a socket
+  ([reference](docs/reference.md#6-testing)).
 
-| | Feature | Notes |
+Planned:
+
+- Database integration, over goose-postgres and goose-sqlite.
+- An OpenAPI document from the routes.
+- JWT, sessions, and rate limiting. Until then, verify tokens yourself behind the
+  bearer middleware, read cookies with `plod::cookie`, and rely on goose-http's
+  per-connection limits.
+- HTTP/3 for routes that wait. It works today for routes that answer at once.
+
+## Packages
+
+Plod and its optional modules use these Goose packages, each in a repository of its own:
+
+| Package | What it does | Used by |
 |---|---|---|
-| 🟢 | Routes | Path parameters, 404, 405, and `OPTIONS` ([reference](docs/reference.md#1-context-and-routes)). |
-| 🟢 | Scopes | Prefixes, each with its own middleware. |
-| 🟢 | Extractors | Path, query, header, and cookie parameters, JSON, and custom types ([reference](docs/reference.md#3-extractors)). |
-| 🟢 | Forms | URL-encoded and multipart fields and files ([reference](docs/reference.md#3-extractors)). |
-| 🟢 | State | Per worker in `cx.app`, per request in `cx.state`. |
-| 🟢 | Middleware | Blocks inlined into the handler ([below](#middleware)). |
-| 🟢 | Errors | JSON errors, a custom format, or RFC 9457 ([reference](docs/reference.md#5-errors)). |
-| 🟢 | Async work | Work on other threads and lanes, resumed with the reply ([tutorial](docs/tutorial/11-waiting.md)). |
-| 🟢 | Testing | `plod::serve_one` without a socket ([reference](docs/reference.md#6-testing)). |
-| 🟢 | OpenAPI in | Types, readers, writers, and a router from OpenAPI 3.1 ([generator](docs/generator.md)). |
-| ⚪ | OpenAPI out | A document from the routes. Planned. |
-| 🟢 | Bodies in pieces | Any size, as it arrives, or gathered ([reference](docs/reference.md#4-later-calls)). |
-| 🟢 | Files, streaming | Files with ranges and conditional requests, and responses in pieces, as for SSE ([reference](docs/reference.md#4-later-calls)). |
-| 🟢 | WebSocket | An optional module ([reference](docs/reference.md#43-websocket)). |
-| 🟢 | HTTPS | TLS 1.3, h2 or HTTP/1.1 by ALPN, and a context per connection, in an optional module ([reference](docs/reference.md#13-https)). |
-| 🟡 | HTTP/3 | Off unless a listener asks, in an optional module; routes can't wait on it yet ([reference](docs/reference.md#13-https)). |
-| 🟢 | HTTP client | goose-http's, from a lane ([its API](https://github.com/kaitk/goose-http/blob/main/docs/api.md#an-http-client)). |
-
-### Middleware
-
-| | Middleware | Notes |
-|---|---|---|
-| 🟢 | CORS | Preflight requests, allowed origins, and credentials. |
-| 🟢 | Bearer tokens | 401 with `WWW-Authenticate`; passes the token to your verifier. |
-| 🟢 | Server-Timing and access log | Combined middleware, or timing alone. |
-| 🟢 | Your own | Any `inline fn` that takes a block ([reference](docs/reference.md#2-middleware)). |
-| ⚪ | JWT | No built-in verifier; use your own with the bearer middleware. |
-| ⚪ | Sessions | No session store yet; read cookies with `plod::cookie`. |
-| 🟢 | Compression | gzip, deflate, and zstd according to `Accept-Encoding`, in an optional module, for answers written whole and responses sent in pieces; files go as they are ([reference](docs/reference.md#21-compression)). |
-| ⚪ | Rate limiting | No limiter yet; goose-http's per-connection limits and timeouts apply. |
-| 🟢 | Default headers | Security headers with HTML and API presets, prepared at setup and selected per request ([reference](docs/reference.md#22-security-headers)). |
+| [goose-http](https://github.com/kaitk/goose-http) | The server: HTTP/1.1 and h2, a loop per worker, lanes, and mail between threads | Plod itself |
+| [goose-tls](https://github.com/kaitk/goose-tls) | A TLS 1.3 server in Goose, and a client, over OpenSSL 3 | `plod.tls` |
+| [goose-acme](https://github.com/kaitk/goose-acme) | Certificates from Let's Encrypt or any ACME CA, through TLS-ALPN-01 | HTTPS without a proxy |
+| [goose-compress](https://github.com/kaitk/goose-compress) | gzip, deflate, and zstd encoders, whole or streamed | `plod.compression` |
+| [goose-hash](https://github.com/kaitk/goose-hash) | SHA-1, SHA-256, HMAC, PBKDF2, and secure random bytes | `plod.websocket`'s handshake |
+| [goose-postgres](https://github.com/kaitk/goose-postgres) | The PostgreSQL protocol, with pipelined queries and no I/O of its own | A lane's database |
+| [goose-sqlite](https://github.com/kaitk/goose-sqlite) | SQLite, built from the amalgamation it carries | A lane's database, or a route's |
 
 ## Quick start
 
@@ -109,18 +139,16 @@ TinyCC, which can't start threads.*
 the routes and calls your handler for each operation with typed, validated parameters
 and a validated body: [tutorial, page 5](docs/tutorial/05-schema.md).
 
-The [tutorial](docs/tutorial/README.md) builds a projects API a page at a time: the
-basics first, then bodies and responses of any size, work that waits, and limits. The examples are complete
-programs to start from, each built and tested with HTTP requests:
+The examples are complete programs to start from, each tested over HTTP:
 
 | Example | What it shows |
 |---|---|
-| [`plain/`](examples/plain/main.goose) | Without a schema: routes, scopes, extractors, a JSON or form body, middleware, and a 4 MB upload alongside the 1 MB default |
-| [`schema/`](examples/schema/) | From `api.json`: generated types and router, hand-written handlers, and a 2 MB route limit set with `x-body-limit` |
-| [`compress/`](examples/compress/main.goose) | Answers compressed according to `Accept-Encoding`, with the optional `plod.compression` module: goose-http's defaults, an export compressed as it's sent in pieces, and a scope with its own compression levels and no zstd |
-| [`upgrade/`](examples/upgrade/main.goose) | An upgraded connection with `plod::upgrade`: a 101, then the client's bytes echoed back until the server closes the connection, or the client closes it first |
-| [`websocket/`](examples/websocket/main.goose) | A WebSocket echo with the optional `plod.websocket` module: `plod::ws_upgrade` at the request, and each message back through `plod::ws_read` |
-| [`device/`](examples/device/) | A board's API: sysfs readings, bounded settings, a firmware upload, a bearer token, and CORS, on one worker |
+| [`plain/`](examples/plain/main.goose) | Routes, scopes, extractors, and middleware, without a schema |
+| [`schema/`](examples/schema/) | A generated router and types, with hand-written handlers |
+| [`compress/`](examples/compress/main.goose) | Compressed answers, whole and in pieces |
+| [`upgrade/`](examples/upgrade/main.goose) | A 101 and an echo of the client's bytes |
+| [`websocket/`](examples/websocket/main.goose) | A WebSocket echo |
+| [`device/`](examples/device/) | A board's API: sysfs readings, a firmware upload, a token, and CORS |
 
 ## Concepts
 
@@ -143,21 +171,36 @@ flowchart LR
   handler, so a layer adds no function call ([middleware](docs/reference.md#2-middleware)).
 - **Errors return to the route.** A failure anywhere within a route ends it with a JSON
   error in a customizable format ([errors](docs/reference.md#5-errors)).
-- **Workers share nothing and never block**, as in
-  [goose-http](https://github.com/kaitk/goose-http#concepts). I/O-bound work, such as a
-  query to a database server, runs on a lane, one or more threads of its own: the route
-  sends it a
-  [message](https://github.com/kaitk/goose-http/blob/main/docs/patterns.md#mail-between-threads)
-  and resumes when the reply arrives, the half-sync/half-async pattern
-  ([tutorial](docs/tutorial/11-waiting.md), [why](docs/architecture.md#waiting-on-a-lane)).
-  Each lane takes an enum of its jobs, so a job sent to the wrong lane doesn't compile,
-  and a job's error fails its route.
+- **Workers share nothing and never block** ([below](#routes-dont-block)). Each lane
+  takes an enum of its jobs, so a job sent to the wrong lane doesn't compile, and a
+  job's error fails its route.
 - **An abort ends the process**, in a worker or a lane. Run the server under systemd,
   Docker, or Kubernetes, which restarts it
   ([goose-http](https://github.com/kaitk/goose-http/blob/main/docs/patterns.md#a-crash-ends-the-process)).
 
 For differences from Actix and the reasons behind them, see the
 [architecture](docs/architecture.md#actix-and-where-plod-differs).
+
+### Routes don't block
+
+A worker is one thread serving thousands of connections, so while a route runs, the
+worker's other connections wait. A 20 ms query inside a route holds up all of them for
+20 ms. Plod therefore splits a server in two, the half-sync/half-async pattern:
+
+- **Workers** are the asynchronous half. They run routes, which parse, check, look up,
+  and answer. Short CPU work, including a query on embedded SQLite, stays here.
+- **Lanes** are the synchronous half: threads that run plain blocking code, such as a
+  database driver, a call to another service, or a long computation. A route sends a
+  lane a job with `plod::ask` and returns. The worker serves other connections, and
+  calls the route again when the reply arrives.
+
+[Work that waits](docs/tutorial/11-waiting.md) makes that move one step at a time.
+[Lanes and jobs](docs/best-practices/lanes.md) shows how to give each kind of slow work
+a lane of its own ([6.1](docs/best-practices/lanes.md#61-a-lane-for-each-kind-of-slow-work)),
+keep long CPU work off the workers
+([6.3](docs/best-practices/lanes.md#63-long-cpu-work-goes-to-a-lane)), and choose
+which work is refused under load
+([6.4](docs/best-practices/lanes.md#64-choosing-which-work-is-refused-under-load)).
 
 ## Benchmarks
 
@@ -197,21 +240,28 @@ fails, which isn't measured.
 Goose uses io_uring. Results for every server, both Goose event loops, and memory:
 [docs/benchmarks.md](docs/benchmarks.md#against-other-frameworks).
 
-## Credits
+## Prior art
 
-The runtime draws three ideas from [actix-web](https://github.com/actix/actix-web):
+Plod builds on ideas from these projects:
 
-- An `App` of scopes and routes.
-- Extractors chosen by type.
-- Middleware around a group of routes.
-
-The generator draws three ideas from Elysia 2, the `kiana` branch of
-[Elysia](https://github.com/elysiajs/elysia), reviewed at `c91f61f` (2026-10-11):
-
-- One composed handler per route, with only the hooks it needs and the request parts it
-  reads.
-- Inline validators.
-- A response writer that copies only declared fields.
-
-Goose's compiler does at build time what Elysia generates at run time or in its AOT build
-([architecture](docs/architecture.md#the-generator)).
+- **[Tina](https://github.com/pmbanugo/tina)**, a thread-per-core framework in Odin:
+  the original design that goose-http grew from, and that Plod inherits. A loop per
+  worker, and bounded boxes that carry jobs to lanes and replies back
+  ([goose-http's credits](https://github.com/kaitk/goose-http#credits)).
+- **[actix-web](https://github.com/actix/actix-web)**: the runtime's model. An `App` of
+  scopes and routes, extractors chosen by type, and middleware around a group of
+  routes.
+- **[Elysia](https://github.com/elysiajs/elysia) 2**, its `kiana` branch, reviewed at
+  `c91f61f` (2026-10-11): the generator's shape. One composed handler per route, with
+  only the hooks it needs and the request parts it reads, inline validators, and a
+  response writer that copies only declared fields. Goose's compiler does at build time
+  what Elysia generates at run time or in its AOT build
+  ([architecture](docs/architecture.md#the-generator)).
+- **[Aegon](https://github.com/UdayKhare09/Aegon)**, a C++ framework: much of the
+  feature list. Its guide served as the checklist for what a framework should offer.
+  RFC 9457 errors, the security-header presets, and the shorter route declarations come
+  from it, and so do the plans for JWT, more auth schemes, and a data layer.
+- **[HttpArena](https://github.com/MDA2AV/HttpArena)** and its entries: smaller
+  optimizations, each measured before it was taken.
+  [viltrum](https://github.com/Tuntii/viltrum) (V) led goose-http to timers on the
+  precise clock and timer tables that grow with use.
