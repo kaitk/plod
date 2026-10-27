@@ -1,7 +1,8 @@
 # 062: Static files, and whether a cache pays
 
-Status: in progress (2026-10-24): released in Plod `v0.5.9` over goose-http `v0.5.12`,
-and in the entry on the pull request; the board's numbers are left. Where the time of
+Status: done (2026-10-27): released in Plod `v0.5.9` over goose-http `v0.5.12`, and
+on HttpArena's board, static-h2 at 256 connections went from 408 K to 938 K (task 047,
+"The board, 2026-10-24"). Where the time of
 a static file over TLS goes in `plod::files`, and, if reading the disk is it, a file
 cache in goose-http that a program chooses where it calls `plod::files`, bounded, and
 following the disk. Reading the disk was most of it: `plod::cached_files`, over
@@ -167,4 +168,5 @@ past 64 KB), and Plod's `test/pieces/files.goose`, whose cases now run through b
       tested for a replaced file and a full budget (2026-10-24)
 - [x] If a cache: the entry's static-h2 measured before and after, and the entry using
       it through Plod's documented call (2026-10-24)
-- [ ] Released, and the board's static-h2, static-tls, and static-h3 recorded
+- [x] Released, and the board's static-h2, static-tls, and static-h3 recorded
+      (2026-10-27: 938 K, 918 K, and 923 K, in task 047)

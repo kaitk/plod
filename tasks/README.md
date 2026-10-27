@@ -63,12 +63,11 @@ Work can start at any point unless the table says otherwise.
 | 043: workers started with `http::run` | Done on a pinned Goose commit; the README waits for releases. |
 | 046: rename to Plod | Released as `v0.4.0` from `kaitk/plod`; the SVG logo (task 059) remains. |
 | 059: Ari's logo as SVG | After 046's PNG logo; any time. |
-| 047: HttpArena | After 046; the master plan, with the work in goose-http, goose-tls, goose-sqlite, and goose-postgres. |
+| 047: HttpArena | On the board since 2026-10-25, every profile but gRPC; the `emerging` tier is left. |
 | 052: database work on lanes | goose-postgres's and goose-sqlite's decisions and tasks; beside 047. |
 | 053: a contained scope in Goose | A design note only; it builds on task 051, cancelled on 2026-10-21, so it waits until restarts are pursued. |
 | 048: Aegon in the REST benchmark | Built and checked on the desktop, without tier D; the nightly run measures it. |
-| 062: static files, and whether a cache pays | Any time: an A/B in Docker first; a profile waits for a free Linux machine. Before HttpArena's next `--save` to count there. |
-| 061: viltrum | goose-http's tasks 065 and 066 are on Plod's pin, and viltrum runs in `bench/httparena.sh` and the REST tiers; its "Next" lists what's left: echo-ws measured, releases, ring entries, the router gap, once-campfire. |
+| 061: viltrum | goose-http's tasks 065 and 066 are on Plod's pin, and viltrum runs in `bench/httparena.sh` and the REST tiers; its "Next" lists what's left: ring entries, the router gap, once-campfire. |
 | 056: what to take from Aegon | Verdicts set; seventeen subtasks. 01, shorter routes, is merged as skip-based routing with block scopes; tier M's count on Linux and a full `bench/routes.sh` run are todo. 02 to 08 are small and can run beside goose-http's TLS and h2 work; 16 and 17 wait on 052. 05 (JWT) unblocks 035's full example and parts of 047. |
 | 055: a documentation site | Any time; at `kaitk.github.io/plod`. |
 | 049: ACME | Unblocked: `rest.tls` serves with a chooser (`v0.3.3`), and a goose-rest server got and renewed a Pebble certificate by hand; goose-acme `v0.0.3` reaches Let's Encrypt's staging service. The chooser fed by mail from the ACME lane, a committed Pebble run, and a staging certificate remain. |

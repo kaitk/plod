@@ -329,10 +329,8 @@ it is on the pull request's branch. Left, in order:
 
 1. Done: echo-ws at 16,384 connections on 4 workers, 439,682 messages a second
    ("WebSockets on 4 workers", above).
-2. Ready (2026-10-24): the owner ran `/benchmark --save` on 2026-10-23, at Plod
-   `v0.5.4`. HTTP/3 is now in the entry, tuned, validated in WSL and on macOS, so the
-   next run is ours to ask for, with `/benchmark -f plod --save` (task 047, "The pull
-   request").
+2. Done: the board's run of 2026-10-24, at Plod `v0.5.9`, HTTP/3 included (task 047,
+   "The board, 2026-10-24").
 3. goose-http task 065's last item: the ring's 4,096 submission entries, 260 KiB a
    worker.
 4. The 3.5 µs a request between Plod's hand-written and generated routers on tier R.

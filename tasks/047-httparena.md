@@ -1,11 +1,12 @@
 # 047: HttpArena
 
 Status: in-progress. The plan for entering HttpArena (2026-10-19). The entry,
-`bench/httparena/plod/`, subscribes to 22 profiles, the gateway three among them, and
-is HttpArena's pull request [#1623](https://github.com/MDA2AV/HttpArena/pull/1623),
-open, as experimental in standard mode. It imports Plod `v0.5.6` and goose-http
-`v0.5.9`, and passes HttpArena's `validate.sh` at `d9438f6`, still HttpArena's `main`:
-144 checks, none failed (2026-10-24, Docker Desktop on an M1 Pro). Its JSON is
+`bench/httparena/plod/`, subscribes to 24 profiles, the gateway three and both h3 ones
+among them, and is on HttpArena's board: pull request
+[#1623](https://github.com/MDA2AV/HttpArena/pull/1623) was merged on 2026-10-25, as
+experimental in standard mode, with the results of a `--save` run at Plod `v0.5.9` and
+goose-http `v0.5.12` ("The board, 2026-10-24", below). Left: the `emerging` tier ("The
+entry's tier"). Its JSON is
 serialized per request with `plod::format_fields`, `/async-db`'s and the cache's rows
 decoded into structs, and production-stack's cache admits at most 1,024 asks a worker,
 less its pool's hand-overs ("Bounding production-stack's memory", below). What a review
@@ -82,6 +83,28 @@ with `--depth=1`, so the branch must contain `main`'s latest commit when the run
 starts, not when it's asked for. The fork's `plod` then took Plod `v0.5.9` (goose-http
 `v0.5.12`, with the static file cache) and a merge of `main` at `2454978`, pushed as a
 fast-forward (`dc9307b0`), and the run was asked for again.
+
+### The board, 2026-10-24
+
+The run finished at 20:50 UTC on 2026-10-24, and the pull request was merged on
+2026-10-25. Against the run of 2026-10-23 (Plod `v0.5.4`), the profiles that moved:
+
+| Profile | Connections | 2026-10-23 | 2026-10-24 | Why |
+|---|---:|---:|---:|---|
+| static-h2 | 256 | 407,892 | 938,115 | `plod::cached_files` (task 062) |
+| static-h2 | 1,024 | 375,952 | 915,111 | the same |
+| static-tls | 1,024 | 437,637 | 918,166 | the same |
+| gateway-h3 | 64 | 83,574 | 197,061 | stock nginx at the edge |
+| gateway-h3 | 256 | 75,422 | 200,536 | the same |
+| baseline-h3 | 64 | | 6,822,294 | new |
+| static-h3 | 64 | | 923,390 | new |
+
+The rest are within 3%, and most profiles' memory fell by about 75 MiB (baseline 291 to
+215 MiB). Among the board's standard-mode entries that aren't engines or tuned, at
+HttpArena's `c9ae248`: first on static-h2 at 256, baseline-h3, static-h3, and
+gateway-h3; second on static-h2 at 1,024 (fib 945 K); third on static-tls (fib 1.23 M).
+Aegon gets 6.10 M on baseline-h3 and 606 K on static-h3; zix, an engine, 9.09 M on
+baseline-h3.
 
 Done after the review (2026-10-24): Plod `v0.5.6` writes `format_fields`' JSON through
 Goose's `json` writer and adds `plod::bytes` and `plod::field`, which `/echo` and
@@ -321,13 +344,14 @@ implementations.
 
 - [x] goose-http has tasks for outbound connections (053) and WebSocket (054), and its
       task 014 records this order (2026-10-19, on goose-http's `main`)
-- [ ] The entry submitted as experimental
+- [x] The entry submitted as experimental (merged 2026-10-25)
 - [ ] The project's own bar met, as "The entry's tier" lists, and a pull request
       setting `meta.json`'s `type` to `emerging` accepted
-- [ ] The entry runs the six HTTP/1.1 profiles; `validate.sh` passes and the results are
-      saved
-- [ ] json-tls and 8gbit in the entry, passing HttpArena's TLS checks
+- [x] The entry runs the six HTTP/1.1 profiles; `validate.sh` passes and the results are
+      saved (2026-10-24)
+- [x] json-tls and 8gbit in the entry, passing HttpArena's TLS checks (2026-10-24)
 - [x] gateway-64, gateway-h3, and production-stack in the entry (2026-10-23)
-- [ ] The three WebSocket profiles in the entry
-- [ ] The four h2 profiles in the entry
-- [ ] baseline-h3 and static-h3 in the entry, measured against Aegon and zix-http3
+- [x] The three WebSocket profiles in the entry (2026-10-24)
+- [x] The four h2 profiles in the entry (2026-10-24)
+- [x] baseline-h3 and static-h3 in the entry, measured against Aegon and zix-http3
+      (2026-10-24: "The board, 2026-10-24", and zix-http3 under "The pull request")
