@@ -3,7 +3,7 @@
 // plays the lane with its own run case function: no thread runs, and
 // nothing waits.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.12";
+import http from "github.com/kaitk/goose-http@v0.5.13";
 import plod from "../../../../../";
 import app from "../../";
 import expect from "../";

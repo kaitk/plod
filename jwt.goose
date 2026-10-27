@@ -3,7 +3,7 @@
 // that imports this module needs goose-hash, for HMAC-SHA-256, which its
 // root file declares at the tag below:
 //
-//   import http from "github.com/kaitk/goose-http@v0.5.12";
+//   import http from "github.com/kaitk/goose-http@v0.5.13";
 //   import hash from "github.com/kaitk/goose-hash@v0.0.4";
 //   import plod from "github.com/kaitk/plod@<tag>";
 //   import plod.jwt;

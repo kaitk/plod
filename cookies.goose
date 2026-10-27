@@ -1,6 +1,6 @@
 namespace plod;
 
-import http from "github.com/kaitk/goose-http@v0.5.12";
+import http from "github.com/kaitk/goose-http@v0.5.13";
 
 // Between http::start and http::finish, or plod::begin and its first send.
 // Validation and serialization are goose-http's; false writes nothing.

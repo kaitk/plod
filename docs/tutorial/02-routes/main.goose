@@ -2,7 +2,7 @@
 // scope, the extractors, and answers in JSON.
 import std;
 import os;
-import http from "github.com/kaitk/goose-http@v0.5.12";
+import http from "github.com/kaitk/goose-http@v0.5.13";
 import plod from "../../../";
 
 struct Project { id: i64, name: u8[..64], archived: bool }

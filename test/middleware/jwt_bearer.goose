@@ -1,7 +1,7 @@
 // plod::jwt_bearer: a valid token's subject, no token, an expired one, one
 // signed with another secret, and one the route refuses itself, by its jti.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.12";
+import http from "github.com/kaitk/goose-http@v0.5.13";
 import hash from "github.com/kaitk/goose-hash@v0.0.4";
 import plod from "../../";
 import plod.jwt;

@@ -4,7 +4,7 @@
 // dates and their leeway, the issuer, and the audience.
 import std;
 import json;
-import http from "github.com/kaitk/goose-http@v0.5.12";
+import http from "github.com/kaitk/goose-http@v0.5.13";
 import hash from "github.com/kaitk/goose-hash@v0.0.4";
 import plod from "../../";
 import plod.jwt;
