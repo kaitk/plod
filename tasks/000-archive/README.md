@@ -41,3 +41,4 @@ number ("task 019"); the number stays unique.
 - 051: Workers and lanes that restart after an abort (cancelled; `051-restart-after-abort.md`)
 - 057: Inline a block called once, whatever its size (cancelled; `057-inline-blocks-called-once.md`)
 - 058: Uploads beside forms (done; `058-uploads-beside-forms.md`)
+- 062: Static files, and whether a cache pays (done; `062-static-files.md` at `7f7285e1`)
