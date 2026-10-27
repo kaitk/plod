@@ -56,9 +56,10 @@ pass their tests on arm64 Linux. It provides:
 - **Bodies and responses of any size**, in pieces as they arrive or are sent, files
   with ranges and conditional requests, and SSE
   ([reference](docs/reference.md#4-later-calls)).
-- **Middleware**, inlined into the handler: CORS, bearer tokens and JWTs signed with
-  HS256, Server-Timing and an
-  access log, security headers, compression (gzip, deflate, zstd), and any
+- **Middleware**, inlined into the handler: CORS; bearer tokens, Basic, API keys, and
+  cookies, JWTs signed with HS256 in a header or a cookie, and role checks;
+  Server-Timing and an access log, security headers, compression (gzip, deflate,
+  zstd), and any
   `inline fn` of your own that takes a block
   ([reference](docs/reference.md#2-middleware)).
 - **WebSocket and HTTPS**, in optional modules: TLS 1.3, with h2 or HTTP/1.1 by ALPN

@@ -1,0 +1,5 @@
+// The physics package's native part: the C layer over Box3D, a CMake
+// project (CMakeLists.txt beside this file); its functions run on the main
+// thread only.
+cmake_target = "goose_physics";
+main_thread_only = true;

@@ -1,0 +1,143 @@
+/* The documentation site's one stylesheet. A readable text column, a
+   sticky table of contents beside it on wide screens, and nothing that
+   depends on scripts. */
+
+:root {
+  --text: #1f2328;
+  --muted: #59636e;
+  --rule: #d1d9e0;
+  --code-bg: #f6f8fa;
+  --link: #0a5bb5;
+  --nav-bg: #ffffff;
+  --accent: #c8461c;
+  --toc-width: 17rem;
+  --column: 46rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 16px; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: #ffffff;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.55;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* The top bar. */
+header.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  padding: 0.5rem 1.25rem;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--rule);
+}
+header.top .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+header.top .brand img { height: 1.6rem; width: auto; }
+header.top nav { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; }
+header.top nav a { color: var(--muted); }
+header.top nav a:hover { color: var(--text); text-decoration: none; }
+
+/* The page: an optional table of contents beside the text. */
+.page { display: flex; align-items: flex-start; }
+main {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: var(--column);
+  padding: 1rem 1.5rem 4rem;
+  margin: 0 auto;
+}
+.page:not(.with-toc) main { max-width: 64rem; }   /* a program's page: room for its lines */
+aside.toc {
+  flex: 0 0 var(--toc-width);
+  position: sticky;
+  top: 3.2rem;
+  max-height: calc(100vh - 3.2rem);
+  overflow-y: auto;
+  padding: 1rem 0.5rem 2rem 1rem;
+  font-size: 0.85rem;
+  border-right: 1px solid var(--rule);
+}
+aside.toc ul { list-style: none; margin: 0; padding-left: 0; }
+aside.toc ul ul { padding-left: 0.9rem; }
+aside.toc ul ul ul { display: none; }      /* two levels are enough to find a section */
+aside.toc li { margin: 0.15rem 0; }
+aside.toc a { color: var(--muted); }
+aside.toc a:hover { color: var(--text); }
+aside.toc > nav > ul > li > a { font-weight: 600; color: var(--text); }
+@media (max-width: 64rem) {
+  .page { display: block; }
+  aside.toc {
+    position: static;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 0.5rem 1.5rem 1rem;
+    margin: 0 auto;
+    max-width: var(--column);
+  }
+}
+
+/* Text. */
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.8em 0 0.6em; }
+h1 { font-size: 2rem; margin-top: 0.6em; }
+h2 { font-size: 1.45rem; padding-bottom: 0.25em; border-bottom: 1px solid var(--rule); }
+h3 { font-size: 1.15rem; }
+h4 { font-size: 1rem; }
+h2 a, h3 a, h4 a { color: inherit; }
+p, ul, ol, table, pre, blockquote { margin: 0 0 1em; }
+li > p { margin-bottom: 0.4em; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2.5em 0; }
+blockquote {
+  margin-left: 0;
+  padding: 0.2em 1em;
+  border-left: 4px solid var(--accent);
+  color: var(--text);
+}
+img { max-width: 100%; height: auto; }
+details > summary { cursor: pointer; color: var(--muted); }
+footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.85rem; }
+
+/* Code. */
+code, pre {
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.875em;
+}
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.8em 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  line-height: 1.45;
+}
+pre code { background: none; padding: 0; font-size: 1em; }
+pre > code.sourceCode { white-space: pre; }
+div.sourceCode { margin: 0 0 1em; }
+
+/* Tables. */
+table { border-collapse: collapse; display: block; max-width: 100%; overflow-x: auto; }
+th, td { border: 1px solid var(--rule); padding: 0.35em 0.7em; text-align: left; vertical-align: top; }
+th { background: var(--code-bg); }
+td code { white-space: nowrap; }

@@ -31,8 +31,8 @@ trades memory for rate.
 |---|---|---|---|
 | Every violation in one answer | 422 with a map of JSON paths such as `items[1].quantity` | The first error, as `invalid_body` with `detail` and `at` | 02 |
 | RFC 9457 problem details | `ctx.problem()`, and problem+json for every built-in error | A preset through request-state overloads; the default error path compiles to identical machine code | 03 |
-| More auth schemes, and role guards | Basic, API key, and cookie beside bearer; optional auth; `require_role` and `require_any_role` | Bearer only | 04 |
-| JWT | Signing and verification; HS, RS, PS, and ES; JWKS served and consumed; a denylist | None; the README lists it ⚪ | 05 |
+| More auth schemes, and role guards | Basic, API key, and cookie beside bearer; optional auth; `require_role` and `require_any_role` | Bearer, Basic, API key, and cookie; `require_role` and `require_any_role` (2026-10-27) | 04 |
+| JWT | Signing and verification; HS, RS, PS, and ES; JWKS served and consumed; a denylist | HS256 in `plod.jwt`, in a header or a cookie (2026-10-27) | 05 |
 | Security headers | `security_headers()` with `defaults()` and `api()` presets | HTML and API presets prepared at setup and selected per request; Linux instruction costs recorded | 06 |
 | Access log options | Formats, levels per status class, a slow threshold, skip rules, a request logger with a correlation ID | `rest::timed`'s one fixed line | 07 |
 | Small helpers | SSE, a directory of files with SPA fallback, cookies out, CORS patterns and presets | `rest::begin` and `rest::pause`, `rest::file`, exact CORS origins | 08 |

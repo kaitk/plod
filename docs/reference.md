@@ -241,6 +241,11 @@ can have its own, and a public route none.
 | `plod::compressed(cx) { cx => ... }` | Compresses the answers inside, errors included, by the request's `Accept-Encoding`, with goose-http's gzip, deflate, and zstd. An optional module: [Compression](#21-compression). |
 | `plod::bearer(cx) { token => ... }` | Fails 401 `unauthenticated` with `WWW-Authenticate: Bearer` without a bearer token; `plod::invalid_token(cx)` refuses one. `plod::bearer_token(cx)` returns it, for a generated router's security check. |
 | `plod::jwt_bearer(cx, keys, check) { t => ... }` | `bearer`, with the token verified as an HS256 JWT and its claims in `t`. An optional module: [JWT](#23-jwt). |
+| `plod::basic(cx, realm) { user, password => ... }` | Fails 401 `unauthenticated` with `WWW-Authenticate: Basic realm="<realm>", charset="UTF-8"` without Basic credentials (RFC 7617); `plod::invalid_credentials(cx, realm)` refuses them, with the same challenge. They're decoded onto `cx.scratch`; compare the password with `hash::equal` or a password hash. `realm` holds no quote or backslash. |
+| `plod::api_key(cx, name) { key => ... }` | Fails 401 `unauthenticated` without the header field `name`, as `X-API-Key`, or with it empty. An API key has no HTTP authentication scheme, so the 401 has no `WWW-Authenticate`. Refuse a key with `plod::fail(cx, 401, "invalid_key")`, or a code of your own. |
+| `plod::cookie_auth(cx, name) { value => ... }` | The same for the cookie `name`, a session's id or a token. `plod::jwt_cookie(cx, name, keys, check) { t => ... }`, in [JWT](#23-jwt)'s module, verifies it as a JWT. |
+| `plod::require_role(cx, roles, role)` | Fails 403 `forbidden`, `detail` `role: <role>`, unless `roles` holds `role`. `roles` is the principal's, any array of strings, as a field of `cx.state` the block above filled in. Call it once for each role a route needs. |
+| `plod::require_any_role(cx, roles, ["a", "b"])` | Fails 403 `forbidden`, `detail` `role: a or b`, unless `roles` holds one of them. |
 
 `timed`, `cors`, `security_headers`, and `compressed` work on either side of
 `plod::routes`. Around it, every answer gets their fields, the 404s outside every
@@ -500,6 +505,7 @@ fn me(cx) {
 | Call | Does |
 |---|---|
 | `plod::jwt_bearer(cx, keys, check) { t => ... }` | `plod::bearer` with the token verified by `jwt_verify`: no token fails 401 `unauthenticated`, and a token it refuses fails 401 `invalid_token`. Goes inside `plod::routes`, as `bearer` does. |
+| `plod::jwt_cookie(cx, name, keys, check) { t => ... }` | `plod::cookie_auth` with the cookie verified by `jwt_verify`: no cookie fails 401 `unauthenticated`, and a token it refuses 401 `invalid_token`, both without `WWW-Authenticate`. |
 | `plod::jwt_verify(token, keys, check) { t => ... }` | Runs the block with the token's claims, a `plod::Jwt`, and returns `plod::JwtError.None`; otherwise returns why not, without running the block. |
 | `plod::jwt_sign(out, key, claims, ttl) { p => ... }` | Appends a token signed with `key`. The block appends the program's own claims to the payload `p`, with `json::format_key` and json's writer, separated by commas. `{ p => }` adds none. |
 
@@ -995,6 +1001,11 @@ another shape, as the end of this section shows:
 | 400 | `bad_handshake` | `plod::ws_upgrade`: a method other than `GET`, a malformed `Sec-WebSocket-Key`, or a subprotocol that isn't a valid field value ([WebSocket](#43-websocket)) |
 | 401 | `unauthenticated`, with `WWW-Authenticate: Bearer` | `plod::bearer`: no bearer token |
 | 401 | `invalid_token`, with `WWW-Authenticate: Bearer error="invalid_token"` | `plod::invalid_token(cx)` |
+| 401 | `unauthenticated`, with `WWW-Authenticate: Basic realm="<realm>", charset="UTF-8"` | `plod::basic`: no Basic credentials |
+| 401 | `invalid_credentials`, with the same challenge | `plod::invalid_credentials(cx, realm)` |
+| 401 | `unauthenticated` | `plod::api_key`, `plod::cookie_auth`, and `plod::jwt_cookie`: no key or cookie, or an empty one |
+| 401 | `invalid_token` | `plod::jwt_cookie`: a token `jwt_verify` refuses |
+| 403 | `forbidden`, with `detail` | `plod::require_role` and `plod::require_any_role`: a role the principal lacks, as `role: admin` |
 | 403 | `origin_not_allowed` | `plod::cors`: an `Origin` it doesn't list |
 | 404 | `not_found` | `plod::routes` and `plod::otherwise`: no route's path matched |
 | 405 | `method_not_allowed`, with an `Allow` field | `plod::routes` and `plod::otherwise`: a route's path matched with another method |

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$pagetitle$ · Goose</title>
+<link rel="icon" href="$root$docs/logo/logo_black_fg_white_bg_square.png">
+<link rel="stylesheet" href="$root$style.css">
+$if(highlighting-css)$
+<style>
+$highlighting-css$
+</style>
+$endif$
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="$root$index.html"><img src="$root$docs/logo/logo_black_fg_trans_bg.png" alt=""> Goose</a>
+  <nav>
+    <a href="$root$docs/index.html">Docs</a>
+    <a href="$root$docs/tutorial.html">Tutorial</a>
+    <a href="$root$docs/reference.html">Reference</a>
+    <a href="$root$docs/goose_spec.html">Spec</a>
+    <a href="$root$docs/stdlib.html">Library</a>
+    <a href="$root$samples/index.html">Samples</a>
+    <a href="$root$bench/summary.html">Benchmarks</a>
+    <a href="https://github.com/aardappel/goose">GitHub</a>
+  </nav>
+</header>
+<div class="page$if(toc)$ with-toc$endif$">
+$if(toc)$
+<aside class="toc">
+<nav aria-label="Contents">
+$table-of-contents$
+</nav>
+</aside>
+$endif$
+<main>
+$body$
+<footer>
+$if(source)$<p>Built from <a href="https://github.com/aardappel/goose/blob/master/$source$"><code>$source$</code></a>.</p>$endif$
+</footer>
+</main>
+</div>
+</body>
+</html>

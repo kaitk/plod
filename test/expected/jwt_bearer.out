@@ -1,1 +1,1 @@
-plod::jwt_bearer: ok
+plod::jwt_bearer, jwt_cookie: ok

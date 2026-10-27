@@ -10,7 +10,12 @@ Added:
 - `plod.jwt`, a module `plod` doesn't import, over goose-hash: `plod::jwt_bearer`,
   `plod::jwt_verify`, and `plod::jwt_sign`, for JWTs signed with HS256, with the
   algorithm fixed by the verifier, keys chosen by `kid`, and `exp`, `nbf`, `iss`, and
-  `aud` checked ([reference](docs/reference.md#23-jwt)).
+  `aud` checked ([reference](docs/reference.md#23-jwt)), and `plod::jwt_cookie`, the
+  same for a token in a cookie.
+- `plod::basic`, `plod::api_key`, and `plod::cookie_auth`, which fail 401 without
+  their credential, with `plod::invalid_credentials` for Basic's refusal; and
+  `plod::require_role` and `plod::require_any_role`, which fail 403 naming the role
+  ([reference](docs/reference.md#2-middleware)).
 
 ## v0.5.9 (2026-10-24)
 

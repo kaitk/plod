@@ -183,6 +183,76 @@ fn invalid_token(cx) {
     fail_auth(cx, "invalid_token", "Bearer error=\"invalid_token\"");
 }
 
+// Runs F(user, password) with the request's Basic credentials (RFC 7617),
+// decoded onto cx.scratch, which the block checks, comparing the password
+// with hash::equal or a password hash. A request without them fails with
+// 401 unauthenticated and WWW-Authenticate: Basic realm="<realm>",
+// charset="UTF-8"; realm holds no quote or backslash. The block refuses
+// them with plod::invalid_credentials(cx, realm). It goes inside
+// plod::route, as any code that fails does.
+inline fn basic<F>(cx, realm: const u8[:]) {
+    let user, password, found = http::basic_auth(cx.req, cx.scratch);
+    guard found else { fail_auth(cx, "unauthenticated", basic_challenge(realm)); }
+    F(user, password);
+}
+
+// Fails the enclosing route with 401 invalid_credentials and plod::basic's
+// challenge, for Basic credentials the program refuses.
+fn invalid_credentials(cx, realm: const u8[:]) {
+    fail_auth(cx, "invalid_credentials", basic_challenge(realm));
+}
+
+fn basic_challenge(realm: const u8[:]) -> u8[>..] { str("Basic realm=\"", realm, "\", charset=\"UTF-8\"") }
+
+// Runs F(key) with the value of the request's header field name, as
+// "X-API-Key", which the block checks. A request without it fails with 401
+// unauthenticated, without WWW-Authenticate, since an API key has no HTTP
+// authentication scheme; the block refuses a key with
+// plod::fail(cx, 401, "invalid_key"), or its own code. It goes inside
+// plod::route.
+inline fn api_key<F>(cx, name: const u8[:]) {
+    let key, found = http::field_of(cx.req, name);
+    guard found && key.len > 0 else { fail(cx, 401, "unauthenticated"); }
+    F(key);
+}
+
+// Runs F(value) with the request's cookie name, a session's id or a token,
+// which the block checks. A request without it fails with 401
+// unauthenticated, without WWW-Authenticate, as plod::api_key does. It goes
+// inside plod::route.
+inline fn cookie_auth<F>(cx, name: const u8[:]) {
+    let value, found = http::cookie_of(cx.req, name);
+    guard found && value.len > 0 else { fail(cx, 401, "unauthenticated"); }
+    F(value);
+}
+
+// Fails the enclosing route with 403 forbidden, detail "role: <role>",
+// unless roles, the principal's, any array of strings, holds role.
+fn require_role(cx, roles, role: const u8[:]) {
+    guard !has_role(roles, role) else { return; }
+    return [Failure { status: 403, at: -1, code: str("forbidden"), detail: str("role: ", role), challenge: "" }]
+        from attempt;
+}
+
+// Fails the enclosing route with 403 forbidden, detail "role: <one> or
+// <another>", unless roles holds one of wanted.
+fn require_any_role(cx, roles, wanted: const u8[:][:]) {
+    for w in wanted { if has_role(roles, w) { return; } }
+    var detail: u8[>..] = [];
+    detail.append("role: ");
+    for w, i in wanted {
+        if i > 0 { detail.append(" or "); }
+        detail.append(w);
+    }
+    return [Failure { status: 403, at: -1, code: str("forbidden"), detail: str(detail), challenge: "" }]
+        from attempt;
+}
+
+fn has_role(roles, role: const u8[:]) -> bool {
+    for r in roles { if r == role { return true; } }
+    return false;
+}
+
 // Runs F, with Server-Timing in its answer, the milliseconds F took, as
 // "app;dur=0.042", and, when log is set, writes an access log line to
 // standard error: method, target, status, the response's bytes, and the

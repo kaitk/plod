@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd">
+<!-- Goose syntax highlighting for pandoc (skylighting), in the KDE syntax
+     definition format. Used by build.py for every ```goose block and for
+     the sample pages; the VS Code extension has its own grammar. -->
+<language name="goose" version="1" kateversion="5.0" section="Sources"
+          extensions="*.goose" mimetype="text/x-goose" priority="5">
+  <highlighting>
+    <list name="keywords">
+      <item>import</item> <item>namespace</item> <item>struct</item> <item>enum</item>
+      <item>type</item> <item>fn</item> <item>thread_fn</item> <item>export</item>
+      <item>simd</item> <item>recursive</item> <item>inline</item> <item>checkfree</item>
+      <item>let</item> <item>var</item> <item>extern</item> <item>const</item>
+      <item>pad</item> <item>reusable</item> <item>if</item> <item>else</item>
+      <item>while</item> <item>for</item> <item>in</item> <item>upto</item> <item>loop</item>
+      <item>block</item> <item>guard</item> <item>match</item> <item>return</item>
+      <item>break</item> <item>continue</item> <item>as</item> <item>from</item>
+      <item>fields</item> <item>variants</item> <item>types</item>
+    </list>
+    <list name="types">
+      <item>bool</item> <item>varint</item>
+      <item>i8</item> <item>i16</item> <item>i32</item> <item>i64</item>
+      <item>u8</item> <item>u16</item> <item>u32</item> <item>u64</item>
+      <item>f32</item> <item>f64</item>
+    </list>
+    <list name="constants">
+      <item>true</item> <item>false</item> <item>null</item> <item>self</item>
+    </list>
+    <list name="builtins">
+      <item>print</item> <item>str</item> <item>format</item> <item>assert</item>
+      <item>abort</item> <item>exit</item> <item>copy</item> <item>default</item>
+      <item>hardware_threads</item> <item>thread_spawn</item>
+      <item>thread_spawn_contained</item> <item>thread_wait</item>
+      <item>qput</item> <item>qget</item> <item>qpoll</item> <item>qlimit</item>
+      <item>to_bytes</item> <item>bytes_of</item> <item>from_bytes</item>
+      <item>embed_file</item> <item>embed_shader</item>
+      <item>len</item> <item>cap</item> <item>push</item> <item>append</item>
+      <item>pop</item> <item>pop_n</item> <item>resize</item> <item>clear</item>
+      <item>index_of</item> <item>alloc_index</item> <item>alloc_ref</item> <item>free</item>
+      <item>alloc_slice</item> <item>realloc_slice</item> <item>free_slice</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces/>
+        <Detect2Chars char="/" char1="/" attribute="Comment" context="LineComment"/>
+        <Detect2Chars char="/" char1="*" attribute="Comment" context="BlockComment" beginRegion="Comment"/>
+        <StringDetect String="&quot;&quot;&quot;" attribute="String" context="RawString"/>
+        <DetectChar char="&quot;" attribute="String" context="String"/>
+        <DetectChar char="'" attribute="Char" context="Char"/>
+        <keyword String="keywords" attribute="Keyword"/>
+        <keyword String="types" attribute="DataType"/>
+        <keyword String="constants" attribute="Constant"/>
+        <keyword String="builtins" attribute="BuiltIn"/>
+        <RegExpr String="0[xX][0-9a-fA-F]+(\.[0-9a-fA-F]+)?[pP][+-]?[0-9]+" attribute="Float"/>
+        <RegExpr String="0[xX][0-9a-fA-F]+" attribute="BaseN"/>
+        <RegExpr String="[0-9]+(\.[0-9]+([eE][+-]?[0-9]+)?|[eE][+-]?[0-9]+)" attribute="Float"/>
+        <RegExpr String="[0-9]+" attribute="DecVal"/>
+        <RegExpr String="[A-Za-z_][A-Za-z0-9_]*(?=\s*\()" attribute="Function"/>
+        <RegExpr String="[A-Z][A-Za-z0-9_]*" attribute="TypeName"/>
+        <AnyChar String="{}()[]" attribute="Normal Text"/>
+        <AnyChar String="+-*/%=&amp;|^!&lt;&gt;~?.:;," attribute="Operator"/>
+      </context>
+      <context name="LineComment" attribute="Comment" lineEndContext="#pop"/>
+      <context name="BlockComment" attribute="Comment" lineEndContext="#stay">
+        <Detect2Chars char="/" char1="*" attribute="Comment" context="BlockComment" beginRegion="Comment"/>
+        <Detect2Chars char="*" char1="/" attribute="Comment" context="#pop" endRegion="Comment"/>
+      </context>
+      <context name="String" attribute="String" lineEndContext="#pop">
+        <HlCStringChar attribute="Special Char"/>
+        <DetectChar char="&quot;" attribute="String" context="#pop"/>
+      </context>
+      <context name="Char" attribute="Char" lineEndContext="#pop">
+        <HlCStringChar attribute="Special Char"/>
+        <DetectChar char="'" attribute="Char" context="#pop"/>
+      </context>
+      <context name="RawString" attribute="String" lineEndContext="#stay">
+        <StringDetect String="&quot;&quot;&quot;" attribute="String" context="#pop"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text" defStyleNum="dsNormal"/>
+      <itemData name="Keyword" defStyleNum="dsKeyword"/>
+      <itemData name="DataType" defStyleNum="dsDataType"/>
+      <itemData name="TypeName" defStyleNum="dsDataType"/>
+      <itemData name="Constant" defStyleNum="dsConstant"/>
+      <itemData name="BuiltIn" defStyleNum="dsBuiltIn"/>
+      <itemData name="Function" defStyleNum="dsFunction"/>
+      <itemData name="Comment" defStyleNum="dsComment"/>
+      <itemData name="String" defStyleNum="dsString"/>
+      <itemData name="Char" defStyleNum="dsChar"/>
+      <itemData name="Special Char" defStyleNum="dsSpecialChar"/>
+      <itemData name="DecVal" defStyleNum="dsDecVal"/>
+      <itemData name="BaseN" defStyleNum="dsBaseN"/>
+      <itemData name="Float" defStyleNum="dsFloat"/>
+      <itemData name="Operator" defStyleNum="dsOperator"/>
+    </itemDatas>
+  </highlighting>
+  <general>
+    <comments>
+      <comment name="singleLine" start="//"/>
+      <comment name="multiLine" start="/*" end="*/"/>
+    </comments>
+    <keywords casesensitive="1"/>
+  </general>
+</language>

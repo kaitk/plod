@@ -205,6 +205,18 @@ inline fn jwt_bearer<F>(cx, keys: const JwtKey[:], check: JwtCheck = JwtCheck { 
     };
 }
 
+// Runs F(t) with the request's cookie name verified by jwt_verify, t its
+// claims. A request without the cookie fails as plod::cookie_auth does, and
+// one jwt_verify refuses with 401 invalid_token, without WWW-Authenticate,
+// since a cookie has no HTTP authentication scheme. It goes inside
+// plod::route.
+inline fn jwt_cookie<F>(cx, name: const u8[:], keys: const JwtKey[:], check: JwtCheck = JwtCheck { .. }) {
+    cookie_auth(cx, name) { token =>
+        let err = jwt_verify(token, keys, check) { t => F(t); };
+        guard err == JwtError.None else { fail(cx, 401, "invalid_token"); }
+    };
+}
+
 // The bytes of s, base64url without padding (RFC 7515 §2), appended to out,
 // and whether s was that. As std's base64 does, it ignores the bits left
 // over in the last character.
