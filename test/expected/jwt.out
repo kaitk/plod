@@ -22,6 +22,7 @@ HS256, no claims to check: ok
 a signature's byte changed: signature
 another payload, the same signature: signature
 signature cut short: signature
+the signature's spare bits set: malformed
 empty: malformed
 one part: malformed
 two parts: malformed
@@ -33,10 +34,15 @@ payload an array: malformed
 payload not JSON: malformed
 exp a string: malformed
 exp negative: malformed
+exp written \u0065xp: malformed
+crit written \u0063rit: malformed
+an escaped name of the program's own: malformed
 exp 1000.9, no leeway, at 999: ok
 exp 1000.9, no leeway, at 1000: expired
 nbf 2000, at nbf - leeway - 1: not yet valid
 nbf 2000, at nbf - leeway: ok
+nbf 1000.1, no leeway, at 1000: not yet valid
+nbf 1000.1, no leeway, at 1001: ok
 iss plod, wanted plod: ok
 iss plod, wanted other: issuer
 no iss, wanted plod: issuer
@@ -44,3 +50,7 @@ aud [web, api], wanted api: ok
 aud [web, api], wanted cli: audience
 no aud, wanted api: audience
 aud a number: malformed
+aud api, then other, wanted api: audience
+aud api, then [], wanted api: audience
+aud other, then [api], wanted api: ok
+aud [api], then web, no audience wanted: aud web

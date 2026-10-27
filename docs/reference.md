@@ -513,8 +513,9 @@ What `jwt_verify` checks, in order, and the `JwtError` each refusal returns:
 
 | Check | Refused with |
 |---|---|
-| Three base64url parts without padding, a header and a payload that are JSON objects, and dates that are numbers of seconds from 1970 on | `Malformed` |
+| Three base64url parts without padding, whose last character's spare bits are zero, so a token has one spelling; a header and a payload that are JSON objects; and dates that are numbers of seconds from 1970 on | `Malformed` |
 | The header has no `crit`: the extensions it names aren't supported | `Malformed` |
+| No member name in the header or the payload is written with an escape, as `"exp"`, which would skip its check | `Malformed` |
 | The header's `alg` is `HS256`. The verifier fixes the algorithm, so `none` and every other `alg` are refused | `Algorithm` |
 | A key: the one whose `kid` is the header's. A token without `kid` takes the only key, and is refused when there are several | `KeyNotFound` |
 | The MAC: HMAC-SHA-256 over the header and payload as sent, compared in constant time | `Signature` |
@@ -525,7 +526,9 @@ What `jwt_verify` checks, in order, and the `JwtError` each refusal returns:
 
 `check.now`, when not 0, stands for the clock, for tests. `exp`, `nbf`, and `iat` are
 optional, as RFC 7519 makes them: a token without `exp` never expires, so a program
-that requires one checks `t.exp >= 0`.
+that requires one checks `t.exp >= 0`. A date's fraction is dropped, except `nbf`'s,
+which rounds up, so neither admits a token early or late. A claim that repeats counts
+as its last one, `aud` included.
 
 `plod::Jwt` holds the registered claims, `iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, and
 `iat`, as `""` or `-1` where a token has none. `aud` is the audience that matched, or

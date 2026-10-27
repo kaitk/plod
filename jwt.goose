@@ -42,7 +42,9 @@ enum JwtError { None, Malformed, Algorithm, KeyNotFound, Signature, Expired, Not
 // among them, is JwtError.Algorithm. The key is the one the header's kid
 // names; a token without kid takes the only key, and is refused when there
 // are several. A header with crit, whose extensions this doesn't know, is
-// malformed (RFC 7515 §4.1.11).
+// malformed (RFC 7515 §4.1.11), and so is a member name written with an
+// escape, which the reader hands over undecoded and so would skip its
+// check. A claim that repeats counts as its last (RFC 7519 §4).
 fn jwt_verify<F>(token: const u8[:], keys: const JwtKey[:], check: JwtCheck = JwtCheck { .. }) -> JwtError {
     let dot = find(token, ".");
     guard dot >= 0 else { return JwtError.Malformed; }
@@ -60,12 +62,14 @@ fn jwt_verify<F>(token: const u8[:], keys: const JwtKey[:], check: JwtCheck = Jw
     var kid = nothing(r);
     var named = false;
     var crit = false;
+    var escaped = false;
     json::each_member(r) { key =>
+        escaped = escaped || find(key, "\\") >= 0;
         if key == "alg" { alg = json::read_string(r, buf); }
         else if key == "kid" { kid = json::read_string(r, buf); named = true; }
         else { crit = crit || key == "crit"; json::skip(r); }
     };
-    guard json::finish(r) && !crit else { return JwtError.Malformed; }
+    guard json::finish(r) && !crit && !escaped else { return JwtError.Malformed; }
     guard alg == "HS256" else { return JwtError.Algorithm; }
 
     var at = -1;
@@ -85,23 +89,28 @@ fn jwt_verify<F>(token: const u8[:], keys: const JwtKey[:], check: JwtCheck = Jw
     var dated = true;
     var heard = check.audience.len == 0;
     json::each_member(p) { key =>
+        escaped = escaped || find(key, "\\") >= 0;
         if key == "iss" { t.iss = json::read_string(p, buf); }
         else if key == "sub" { t.sub = json::read_string(p, buf); }
         else if key == "jti" { t.jti = json::read_string(p, buf); }
         else if key == "exp" { let d, ok = numeric_date(p); t.exp = d; dated = dated && ok; }
-        else if key == "nbf" { let d, ok = numeric_date(p); t.nbf = d; dated = dated && ok; }
+        else if key == "nbf" { let d, ok = numeric_date(p, true); t.nbf = d; dated = dated && ok; }
         else if key == "iat" { let d, ok = numeric_date(p); t.iat = d; dated = dated && ok; }
-        else if key == "aud" && json::peek(p) == '[' {
-            json::each_element(p) {
-                let a = json::read_string(p, buf);
-                if !heard && a == check.audience { t.aud = a; heard = true; }
-            };
-        } else if key == "aud" {
-            t.aud = json::read_string(p, buf);
-            heard = heard || t.aud == check.audience;
+        else if key == "aud" {
+            heard = check.audience.len == 0;
+            t.aud = none;
+            if json::peek(p) == '[' {
+                json::each_element(p) {
+                    let a = json::read_string(p, buf);
+                    if !heard && a == check.audience { t.aud = a; heard = true; }
+                };
+            } else {
+                t.aud = json::read_string(p, buf);
+                heard = heard || t.aud == check.audience;
+            }
         } else { json::skip(p); }
     };
-    guard json::finish(p) && dated else { return JwtError.Malformed; }
+    guard json::finish(p) && dated && !escaped else { return JwtError.Malformed; }
 
     let now = if check.now != 0 { check.now } else { time_ns() / 1000000000 };
     guard t.exp < 0 || now < t.exp + check.leeway else { return JwtError.Expired; }
@@ -117,12 +126,17 @@ fn jwt_verify<F>(token: const u8[:], keys: const JwtKey[:], check: JwtCheck = Jw
 // checker refuses to rebind a variable to a slice of another root.
 fn nothing(r: json::Reader&) -> const u8[:] { return r.text[..0]; }
 
-// A NumericDate (RFC 7519 §2) at the reader, in whole seconds, and whether
-// it was one from the epoch on that an i64 holds.
-fn numeric_date(r: json::Reader&) -> i64, bool {
+// A NumericDate (RFC 7519 §2) at the reader, in whole seconds, a fraction
+// dropped, or rounded up with up, and whether it was one from the epoch on
+// that an i64 holds. exp rounds down and nbf up, so neither lets a token in
+// early or late.
+fn numeric_date(r: json::Reader&, up: bool = false) -> i64, bool {
     let v = json::read_number(r);
     guard v >= 0.0 && v < 1e15 else { return -1, false; }
-    return v as! i64, true;
+    let s = v as! i64;
+    let whole: f64 = s;
+    let d = if up && whole < v { s + 1 } else { s };
+    return d, true;
 }
 
 // Appends a token signed with key, whose header names key.kid when it has
@@ -218,8 +232,8 @@ inline fn jwt_cookie<F>(cx, name: const u8[:], keys: const JwtKey[:], check: Jwt
 }
 
 // The bytes of s, base64url without padding (RFC 7515 §2), appended to out,
-// and whether s was that. As std's base64 does, it ignores the bits left
-// over in the last character.
+// and whether s was that. The bits left over in the last character must be
+// zero (RFC 4648 §3.5), so a token has one spelling.
 fn base64url_decode(out: u8[>..]&, s: const u8[:]) -> const u8[:], bool {
     guard s.len % 4 != 1 else { return "", false; }
     let start = out.len;
@@ -235,6 +249,7 @@ fn base64url_decode(out: u8[>..]&, s: const u8[:]) -> const u8[:], bool {
             out.push((v >> bits & 255) as! u8);
         }
     }
+    guard v & ((1 << bits) - 1) == 0 else { return "", false; }
     return out[start..], true;
 }
 

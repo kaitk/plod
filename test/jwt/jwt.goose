@@ -127,6 +127,11 @@ fn main() {
     swapped.append(good[find(good[find(good, ".") + 1..], ".") + find(good, ".") + 1..]);
     show("another payload, the same signature", swapped, [k1], plod::JwtCheck { now: 1 });
     show("signature cut short", good[..good.len - 3], [k1], plod::JwtCheck { now: 1 });
+    // The MAC's 256 bits leave 2 over in its last character; a spelling with
+    // them set is another text of the same token.
+    let last = plod::base64url_value(good[good.len - 1]);
+    show("the signature's spare bits set", str(good[..good.len - 1], plod::BASE64URL[(last ^ 1) as i64]), [k1],
+         plod::JwtCheck { now: 1 });
 
     // Malformed text.
     show("empty", "", [k1], plod::JwtCheck { now: 1 });
@@ -140,6 +145,12 @@ fn main() {
     show("payload not JSON", token(HS, "{\"sub\":", "secret"), [k1], plod::JwtCheck { now: 1 });
     show("exp a string", token(HS, "{\"exp\":\"soon\"}", "secret"), [k1], plod::JwtCheck { now: 1 });
     show("exp negative", token(HS, "{\"exp\":-5}", "secret"), [k1], plod::JwtCheck { now: 1 });
+    // A name written with an escape would skip its check.
+    show("exp written \\u0065xp", token(HS, "{\"\\u0065xp\":1}", "secret"), [k1], plod::JwtCheck { now: 1000 });
+    show("crit written \\u0063rit", token("{\"alg\":\"HS256\",\"\\u0063rit\":[\"b64\"]}", "{}", "secret"), [k1],
+         plod::JwtCheck { now: 1 });
+    show("an escaped name of the program's own", token(HS, "{\"r\\u006fle\":\"admin\"}", "secret"), [k1],
+         plod::JwtCheck { now: 1 });
 
     // Dates: a fraction of a second, and nbf with its leeway.
     let fraction = token(HS, "{\"exp\":1000.9}", "secret");
@@ -148,6 +159,9 @@ fn main() {
     let later = token(HS, "{\"nbf\":2000}", "secret");
     show("nbf 2000, at nbf - leeway - 1", later, [k1], plod::JwtCheck { now: 2000 - 61 });
     show("nbf 2000, at nbf - leeway", later, [k1], plod::JwtCheck { now: 2000 - 60 });
+    let part = token(HS, "{\"nbf\":1000.1}", "secret");
+    show("nbf 1000.1, no leeway, at 1000", part, [k1], plod::JwtCheck { leeway: 0, now: 1000 });
+    show("nbf 1000.1, no leeway, at 1001", part, [k1], plod::JwtCheck { leeway: 0, now: 1001 });
 
     // Issuer and audience.
     let aud = token(HS, "{\"iss\":\"plod\",\"aud\":[\"web\",\"api\"]}", "secret");
@@ -158,4 +172,14 @@ fn main() {
     show("aud [web, api], wanted cli", aud, [k1], plod::JwtCheck { audience: "cli", now: 1 });
     show("no aud, wanted api", good, [k1], plod::JwtCheck { audience: "api", now: 1 });
     show("aud a number", token(HS, "{\"aud\":7}", "secret"), [k1], plod::JwtCheck { now: 1 });
+    // A claim that repeats counts as its last.
+    show("aud api, then other, wanted api", token(HS, "{\"aud\":\"api\",\"aud\":\"other\"}", "secret"), [k1],
+         plod::JwtCheck { audience: "api", now: 1 });
+    show("aud api, then [], wanted api", token(HS, "{\"aud\":\"api\",\"aud\":[]}", "secret"), [k1],
+         plod::JwtCheck { audience: "api", now: 1 });
+    show("aud other, then [api], wanted api", token(HS, "{\"aud\":\"other\",\"aud\":[\"api\"]}", "secret"), [k1],
+         plod::JwtCheck { audience: "api", now: 1 });
+    plod::jwt_verify(token(HS, "{\"aud\":[\"api\"],\"aud\":\"web\"}", "secret"), [k1], plod::JwtCheck { now: 1 }) { t =>
+        print("aud [api], then web, no audience wanted: aud ", t.aud);
+    };
 }
