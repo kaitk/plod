@@ -13,6 +13,15 @@ less its pool's hand-overs ("Bounding production-stack's memory", below). What a
 of the pull request found, and what it leaves to do, is under "The pull request",
 below.
 
+The entry imports Plod `v0.5.11`, goose-http `v0.5.16`, and goose-postgres `v0.0.10`
+(2026-10-30), the security review's fixes, which the merged pull request predates. Its
+image builds, and `validate.sh` at HttpArena's `25f5f411d` (`main`, 2026-10-30) passes,
+146 checks, h3 and production-stack included, under Docker Desktop on an M1 Pro. No pull
+request from the fork's `plod` is open, so `bench/httparena-submit.sh` would start
+`plod` again from HttpArena's `main`; left to send the update: run it, force-push the
+fork's `plod`, open the pull request (asked for first), and ask for a `--save` run once
+the branch holds `main`'s latest commit ("The pull request", below).
+
 This task is the master plan: which profiles the entry can run, what each one needs, and
 which repository builds it. The protocol and database work happens in those
 repositories, each in its own task. This task tracks only the order and the entry.
