@@ -554,7 +554,7 @@ fn arrived<S>(ev: http::Event, st: Slot<S>&, out: http::Reply) -> u8 {
 fn after<S>(ev: http::Event, st: Slot<S>&, out: http::Reply, k: u8, before: i64) -> u8 {
     let x .= st.ex;
     if k == http::CLOSED {
-        if (x.mode & CODED) != 0 { release_coded(x, out.fd); }
+        if (x.mode & CODED) != 0 { release_coded(x, out); }
         drop_reply(x);
         x.mode &= KEPT;
         return http::NO_EVENT;

@@ -58,20 +58,25 @@ inline fn compressed<S, A, R, F>(cx: Cx<S, A, R>&, c: http::Compression = http::
 // response plod::begin begins inside it.
 var offered: http::Compression;
 
-// A response in pieces compressed on the connection fd, and its encoder from
-// goose-http's pool, which z holds from plod::begin to plod::end or CLOSED.
-struct Coded { fd: i32 = -1, z: http::Compressed = http::Compressed { .. } }
+// A response in pieces compressed for the exchange whose address has key,
+// and its encoder from goose-http's pool, which z holds from plod::begin to
+// plod::end or CLOSED.
+struct Coded { key: u64 = 0, z: http::Compressed = http::Compressed { .. } }
 
 // Each worker's responses in pieces being compressed, found by their
-// connection: the exchange has no room for z, and a field for it would cost
-// every connection of every program. An entry whose z holds no encoder is
-// free, and the array grows to the most at once.
+// exchange's address, Reply.stream.later, whose key no other exchange of
+// the worker has while the exchange lasts: the exchange has no room for z,
+// and a field for it would cost every connection of every program. The
+// connection's fd won't do: an h2 connection's streams share it, and every
+// HTTP/3 exchange has -1. An entry whose z holds no encoder is free, and the
+// array grows to the most at once.
 var coded: Coded[>..];
 
-// The entry of the response compressed on fd.
-fn coded_at(fd: i32) -> i64 {
+// The entry of the response compressed for out's exchange.
+fn coded_at(out: http::Reply) -> i64 {
+    let key = out.stream.later.key;
     for e, i in coded {
-        if e.z.slot >= 0 && e.fd == fd { return i; }
+        if e.z.slot >= 0 && e.key == key { return i; }
     }
     return -1;
 }
@@ -100,25 +105,25 @@ fn begin_coded(x: Exchange&, out: http::Reply, req: const http::Request&, status
         return true;
     }
     let i = free_coded();
-    coded[i].fd = out.fd;
+    coded[i].key = out.stream.later.key;
     http::begin_compressed(out, req, status, content_type, coded[i].z, offered);
     if coded[i].z.slot >= 0 { x.mode |= CODED; }
     return true;
 }
 
 fn send_coded(x: Exchange&, out: http::Reply, data: const u8[:]) {
-    http::send_compressed(out, coded[coded_at(out.fd)].z, data);
+    http::send_compressed(out, coded[coded_at(out)].z, data);
 }
 
 // Ends the response with its coding's trailer, and frees its entry.
 fn end_coded(x: Exchange&, out: http::Reply, trailers: const u8[:]) {
-    http::end_compressed(out, coded[coded_at(out.fd)].z, trailers);
+    http::end_compressed(out, coded[coded_at(out)].z, trailers);
     x.mode &= ~CODED;
 }
 
-// Frees the entry of the response on fd, which ended without plod::end.
-fn release_coded(x: Exchange&, fd: i32) {
-    http::release_compressed(coded[coded_at(fd)].z);
+// Frees the entry of out's response, which ended without plod::end.
+fn release_coded(x: Exchange&, out: http::Reply) {
+    http::release_compressed(coded[coded_at(out)].z);
     x.mode &= ~CODED;
 }
 

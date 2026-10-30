@@ -167,7 +167,7 @@ fn send_coded(x, out: http::Reply, data: const u8[:]) { http::send(out, data); }
 
 fn end_coded(x, out: http::Reply, trailers: const u8[:]) { http::end(out, trailers); }
 
-fn release_coded(x, fd: i32) {}
+fn release_coded(x, out: http::Reply) {}
 
 // Answers a GET or HEAD with the file at path, as http::serve_file does:
 // 200, 206 for a range, 304 when the request's validators match, or 416,

@@ -427,6 +427,14 @@ per-request field in the program's state, with `begin_compressed`, `send_compres
 and `end_compressed` of goose-rest's own, was the alternative: a larger API, and one
 more field for the program to keep and release at `CLOSED`.
 
+Replaced (2026-10-30), task 063: the table finds an encoder by the exchange's address,
+`Reply.stream.later`, whose key goose-http keeps apart from every other exchange's of
+the worker while the exchange lasts, over HTTP/1.1, h2, and HTTP/3. By the fd, two
+streams of one h2 connection, or any two HTTP/3 exchanges, which have fd -1, sent with
+each other's encoders when their responses in pieces overlapped. The key was the only
+identity goose-http already gave each exchange; it reached HTTP/3 with goose-http
+v0.5.16, which gives those exchanges keys too.
+
 ### WebSocket and HTTPS
 
 Decided (2026-10-22): a WebSocket is `rest::ws_upgrade` and `rest::ws_read` in
@@ -440,7 +448,7 @@ function gets `cx.kind` and `cx.body`, not an `http::Event`. The upgrade then ma
 exchange as `rest::upgrade` does, through the same function, and only once the stream
 is open. The program keeps the `http::WebSocket` in its request state and sends with
 `http::ws_send` and `http::ws_close`: the connection holds one WebSocket for its whole
-life, as goose-http's own handler state does, so a table of the module's by fd, which
+life, as goose-http's own handler state does, so a table of the module's, as
 compression keeps for a response's encoder, would add a lookup and nothing else, and a
 field in `Cx` or the exchange would cost every program. goose-rest adds no send or close
 of its own, which would only rename goose-http's.
