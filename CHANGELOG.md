@@ -3,7 +3,24 @@
 What each tag adds. Each release names the Goose compiler it was built and tested with.
 Plod was named goose-rest up to `v0.3.4`; the entries before `v0.4.0` keep that name.
 
-## v0.5.10 (2026-10-30)
+## v0.5.11 (2026-10-30)
+
+A security fix for compressed responses in pieces. Goose `v2026.3`, goose-http
+`v0.5.16`, goose-compress `v0.1.4`; `plod.websocket` and `plod.jwt` declare goose-hash
+`v0.0.4`, and `plod.tls` and `plod.h3` goose-tls `v0.0.6`. No breaking changes.
+
+Fixed:
+
+- Responses in pieces inside `plod::compressed` found their encoders by the
+  connection's fd, so two at once on one h2 connection, or on HTTP/3, where every
+  exchange has fd -1, could send with each other's encoder: one client's bytes could
+  reach another's response. Each now finds its own by its exchange's address
+  ([decision](docs/decisions.md#compression)).
+
+Changed:
+
+- goose-http `v0.5.16`, from `v0.5.15`: later addresses that don't repeat, and an
+  address for every exchange, HTTP/3's included.
 
 Goose `v2026.3`, goose-http `v0.5.15`, goose-compress `v0.1.4`; `plod.websocket` and
 `plod.jwt` declare goose-hash `v0.0.4`, and `plod.tls` and `plod.h3` goose-tls
