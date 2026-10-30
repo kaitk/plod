@@ -3,7 +3,7 @@
 // directory, precompressed copies by Accept-Encoding, HEAD, and a range; and
 // a cached file replaced. Writes test_files/ in the working directory.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.15";
+import http from "github.com/kaitk/goose-http@v0.5.16";
 import plod from "../../";
 import expect from "../";
 import common;

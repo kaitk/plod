@@ -3,7 +3,7 @@
 namespace plod;
 
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.15";
+import http from "github.com/kaitk/goose-http@v0.5.16";
 
 struct Cx<S, A> {
     req: const http::Request&,

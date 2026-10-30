@@ -1,5 +1,5 @@
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.15";
+import http from "github.com/kaitk/goose-http@v0.5.16";
 import plod from "../../";
 import expect from "../";
 import security_common;

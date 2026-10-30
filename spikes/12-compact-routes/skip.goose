@@ -3,7 +3,7 @@
 // Each case prints its answer, or what the program's own middleware saw.
 // Run it from this folder with goose.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.15";
+import http from "github.com/kaitk/goose-http@v0.5.16";
 import plod from "../../";
 import compress from "github.com/kaitk/goose-compress@v0.1.4";
 import plod.compression;

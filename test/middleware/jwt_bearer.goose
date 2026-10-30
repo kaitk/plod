@@ -2,7 +2,7 @@
 // signed with another secret, and one the route refuses itself, by its jti;
 // then plod::jwt_cookie: a valid cookie, an expired one, and none.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.15";
+import http from "github.com/kaitk/goose-http@v0.5.16";
 import hash from "github.com/kaitk/goose-hash@v0.0.4";
 import plod from "../../";
 import plod.jwt;

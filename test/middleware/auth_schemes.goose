@@ -2,7 +2,7 @@
 // valid credentials, and one the block refuses; then plod::require_role and
 // plod::require_any_role over a principal's roles.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.15";
+import http from "github.com/kaitk/goose-http@v0.5.16";
 import plod from "../../";
 import expect from "../";
 import common;
