@@ -6,7 +6,7 @@ import os;
 import http from "github.com/kaitk/goose-http@v0.5.15";
 import compress from "github.com/kaitk/goose-compress@v0.1.4";
 import hash from "github.com/kaitk/goose-hash@v0.0.4";
-import pg from "github.com/kaitk/goose-postgres@v0.0.8";
+import pg from "github.com/kaitk/goose-postgres@v0.0.9";
 import plod from "github.com/kaitk/plod@v0.5.10";
 import app;
 
