@@ -21,6 +21,9 @@ HEAD: HTTP/1.1 200 OK | text/javascript; charset=utf-8 | gzip | Accept-Encoding 
 HEAD length: 10
 range: HTTP/1.1 206 Partial Content | text/javascript; charset=utf-8 | - | Accept-Encoding | plain
 range: bytes 4-8/15
+empty dir: HTTP/1.1 200 OK | text/css; charset=utf-8 | - | Accept-Encoding | body {}
+
+empty dir, %2f: HTTP/1.1 404 Not Found | application/json | - | - | {"error":"file_not_found"}
 == plod::cached_files
 file: HTTP/1.1 200 OK | text/css; charset=utf-8 | - | Accept-Encoding | body {}
 
@@ -44,5 +47,7 @@ HEAD: HTTP/1.1 200 OK | text/javascript; charset=utf-8 | gzip | Accept-Encoding 
 HEAD length: 10
 range: HTTP/1.1 206 Partial Content | text/javascript; charset=utf-8 | - | Accept-Encoding | plain
 range: bytes 4-8/15
-replaced: HTTP/1.1 200 OK | text/css; charset=utf-8 | - | Accept-Encoding | main {}
+empty dir: HTTP/1.1 200 OK | text/css; charset=utf-8 | - | Accept-Encoding | body {}
 
+empty dir, %2f: HTTP/1.1 404 Not Found | application/json | - | - | {"error":"file_not_found"}
+replaced: HTTP/1.1 200 OK | text/css; charset=utf-8 | - | Accept-Encoding | main {}

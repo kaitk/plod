@@ -1,7 +1,9 @@
 // plod::files, and plod::cached_files alike: a file with its type, a
 // directory's index.html, a directory without one, paths that leave the
-// directory, precompressed copies by Accept-Encoding, HEAD, and a range; and
-// a cached file replaced. Writes test_files/ in the working directory.
+// directory, precompressed copies by Accept-Encoding, HEAD, and a range; an
+// empty directory, the working directory, whose names can't be absolute
+// paths; and a cached file replaced. Writes test_files/ in the working
+// directory.
 import std;
 import http from "github.com/kaitk/goose-http@v0.5.16";
 import plod from "../../";
@@ -9,8 +11,9 @@ import expect from "../";
 import common;
 
 // The response to a request for target under /static/, with fields, from
-// plod::cached_files where cached.
-fn fetch(cached: bool, target: const u8[:], fields: const u8[:] = "", method: const u8[:] = "GET") -> u8[>..] {
+// plod::cached_files where cached, of the files in dir.
+fn fetch(cached: bool, target: const u8[:], fields: const u8[:] = "", method: const u8[:] = "GET",
+         dir: const u8[:] = "test_files") -> u8[>..] {
     var log: u8[>..] = [];
     var app = App { log: log };
     return plod::serve_one(str(method, " ", target, " HTTP/1.1\r\n", fields, "\r\n"), app, St { .. }) { cx =>
@@ -19,8 +22,8 @@ fn fetch(cached: bool, target: const u8[:], fields: const u8[:] = "", method: co
         } else {
             plod::routes(cx) { cx =>
                 plod::get(cx, "/static/*name") {
-                    if cached { plod::cached_files(cx, "test_files", "name", 1 << 20, cx.state.file, Use.Download); }
-                    else { plod::files(cx, "test_files", "name", cx.state.file, Use.Download); }
+                    if cached { plod::cached_files(cx, dir, "name", 1 << 20, cx.state.file, Use.Download); }
+                    else { plod::files(cx, dir, "name", cx.state.file, Use.Download); }
                 };
             };
         }
@@ -77,6 +80,8 @@ fn main() {
         show("range", part);
         print("range: ", field_of(part, "Content-Range"));
         assert(field_of(part, "ETag") != "-" && field_of(part, "Last-Modified") != "-");
+        show("empty dir", fetch(cached, "/static/test_files/style.css", "", "GET", ""));
+        show("empty dir, %2f", fetch(cached, "/static/%2fetc%2fhosts", "", "GET", ""));
     }
 
     // Replaced as a deploy replaces it, at the same length: the next answer
