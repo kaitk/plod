@@ -1,6 +1,6 @@
 // plod::path_of, on a parsed request's target and on the other forms.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.13";
+import http from "github.com/kaitk/goose-http@v0.5.15";
 import plod from "../../";
 
 fn main() {

@@ -7,7 +7,7 @@
 namespace plod;
 
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.13";
+import http from "github.com/kaitk/goose-http@v0.5.15";
 
 // Server-Timing as plod::timed writes it before its value, and the spaces it
 // leaves for the value.
