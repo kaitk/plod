@@ -6,8 +6,8 @@ import os;
 import http from "github.com/kaitk/goose-http@v0.5.16";
 import compress from "github.com/kaitk/goose-compress@v0.1.4";
 import hash from "github.com/kaitk/goose-hash@v0.0.4";
-import pg from "github.com/kaitk/goose-postgres@v0.0.9";
-import plod from "github.com/kaitk/plod@v0.5.10";
+import pg from "github.com/kaitk/goose-postgres@v0.0.10";
+import plod from "github.com/kaitk/plod@v0.5.11";
 import app;
 
 thread_fn worker(cfg: http::Config) {

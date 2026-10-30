@@ -14,12 +14,12 @@ on arm64, which the release has no archive for.
 
 | Package | Tag | What for |
 |---|---|---|
-| [Plod](https://github.com/kaitk/plod) | `v0.5.10` | The framework, with `plod::try_reply`, `plod::bytes`, `plod::field`, `plod::cached_files`, and `plod.h3` |
-| [goose-http](https://github.com/kaitk/goose-http) | `v0.5.15` | HTTP/1.1, h2, HTTP/3, WebSocket, the loop, mail between threads, and the file cache |
+| [Plod](https://github.com/kaitk/plod) | `v0.5.11` | The framework, with `plod::try_reply`, `plod::bytes`, `plod::field`, `plod::cached_files`, and `plod.h3` |
+| [goose-http](https://github.com/kaitk/goose-http) | `v0.5.16` | HTTP/1.1, h2, HTTP/3, WebSocket, the loop, mail between threads, and the file cache |
 | [goose-compress](https://github.com/kaitk/goose-compress) | `v0.1.4` | gzip, deflate, and zstd |
 | [goose-tls](https://github.com/kaitk/goose-tls) | `v0.0.6` | A TLS 1.3 server in Goose, with QUIC's handshake and packet protection, over OpenSSL's libcrypto for the ciphers and keys |
 | [goose-hash](https://github.com/kaitk/goose-hash) | `v0.0.4` | SHA-1 for the WebSocket handshake, SHA-256 for SCRAM |
-| [goose-postgres](https://github.com/kaitk/goose-postgres) | `v0.0.9` | Goose's Postgres driver: the protocol, an async pool per worker, and a blocking connection |
+| [goose-postgres](https://github.com/kaitk/goose-postgres) | `v0.0.10` | Goose's Postgres driver: the protocol, an async pool per worker, and a blocking connection |
 
 ## Listeners
 
