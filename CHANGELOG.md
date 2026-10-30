@@ -3,7 +3,11 @@
 What each tag adds. Each release names the Goose compiler it was built and tested with.
 Plod was named goose-rest up to `v0.3.4`; the entries before `v0.4.0` keep that name.
 
-## Unreleased
+## v0.5.10 (2026-10-30)
+
+Goose `v2026.3`, goose-http `v0.5.15`, goose-compress `v0.1.4`; `plod.websocket` and
+`plod.jwt` declare goose-hash `v0.0.4`, and `plod.tls` and `plod.h3` goose-tls
+`v0.0.6`. No breaking changes.
 
 Added:
 
@@ -16,6 +20,15 @@ Added:
   their credential, with `plod::invalid_credentials` for Basic's refusal; and
   `plod::require_role` and `plod::require_any_role`, which fail 403 naming the role
   ([reference](docs/reference.md#2-middleware)).
+
+Changed:
+
+- goose-http `v0.5.15`, from `v0.5.12`: its security fixes, to h2 and HTTP/3 trailers,
+  `http::file_path`, HTTP/3's stream and ACK handling, and the keys of exchanges that
+  wait, so a reply reaches each waiting h2 stream and no other; and, for a program to
+  use directly, shared blobs for one message to many connections (`http.shared`),
+  worker addresses, and `http::wake`
+  ([goose-http's changelog](https://github.com/kaitk/goose-http/blob/v0.5.15/CHANGELOG.md)).
 
 ## v0.5.9 (2026-10-24)
 
