@@ -179,6 +179,19 @@ docs advise; `copy` refuses a slice. A limited array such as `u8[..32]` works to
 
 ## Feature requests
 
+### `json::format_string` scans a byte at a time
+
+Found on `8511ae3` (v2026.3), task 063. Status: open, as goose-http's entry of the same
+name, found on `46356c2`, says.
+
+`json::plain`, which `format_string` calls on every string, tests each byte in a loop.
+In the $12 Server Challenge entry's feed, twenty posts of up to 280 bytes, the loop was
+85% of the handler's own samples. std's `find_any` with a `ByteSet` scans 16 bytes at a
+time on x86-64, as goose-http's `http::json_string` does, which `plod::format_fields`
+now calls for strings. On arm64, `find_any` has no vector path and tests a byte at a
+time through a table (`gs_scan_any_bytes`); there `http::json_string` still took the
+entry from 100,365 to 97,042 instructions a request (callgrind, Linux arm64).
+
 ### goose build takes no C compiler flags
 
 Found and checked on `8511ae34bdc9aabf77baaab80b4d659ea87835e2`, release `v2026.3`, the
