@@ -173,26 +173,100 @@ Kernel time now equals kensac's; the user-time gap is 6 µs. Scaled by kensac's 
 fsharp-kestrel-delneg (247,000), csharp-kestrel-mbobka (260,000), and
 csharp-kestrel-btree-mbobka (280,000); far above rust-axum-tbsvttr (76,000).
 
+### Measured on x86-64, 2026-11-12, third session
+
+AMD Ryzen 7 5800X3D (8 cores, 16 threads), Windows 11, WSL2 Ubuntu 26.04 on Linux
+6.18.58.1-microsoft-standard-WSL2, Docker 29.8.2 on the same kernel. The scripts in
+`bench/twelve-dollar/` as their README says, with `G` a folder in WSL holding the
+checkouts; images rebuilt from the entry's `install.sh` (Goose v2026.4, gcc 13.3.0).
+The entry built with `build-gh.sh goose-http direct-descriptors` against goose-http
+`direct-descriptors` with the shutdown fix below; it passes the 42 checks (`check.sh`).
+
+`bench.sh plod|kensac 4000 20`, 60 s after a 15 s ramp, three alternating rounds:
+
+| Server | µs a request | user | kernel | p99 |
+|---|---:|---:|---:|---:|
+| rust-iouring-kensac | 27.2 to 27.5 | 4.6 to 4.7 | 22.5 to 22.9 | 1.9 to 2.3 ms |
+| entry | 32.5 to 33.3 | 10.1 to 10.3 | 22.3 to 23.2 | 52 to 118 ms |
+
+Kernel time is twice the Mac's for both servers: perf puts 40% of the entry's samples
+in the receive path that loopback through Docker's bridge and netfilter runs inside
+each send. It is the same for both, so the gap is user time: 10.2 µs against 4.65.
+`count.sh base`: 0.121 `io_uring_enter`, 0.030 `pread64`, 0.757 `pwrite64`, 0.141
+context switches a request, as on arm64.
+
+Where the entry's user time goes (`perf.sh plod`, cpu-clock, 20 s at 4,000 users;
+user code is 31% of samples, so 1% is about 0.33 µs):
+
+| Part | Samples | About |
+|---|---:|---:|
+| SQLite (VDBE, B-tree, page cache) | 23.0% | 7.6 µs |
+| goose-http | 2.3% | 0.75 µs |
+| Plod and the entry's handlers | 1.7% | 0.55 µs |
+| Goose runtime (`find_any`, `format`, copies) | 1.5% | 0.5 µs |
+| libc `memcpy` | 1.2% | 0.4 µs |
+| goose-sqlite's shim | 0.6% | 0.2 µs |
+
+SQLite alone takes more user time than the whole of kensac, which reads the B-tree
+without SQL. No Goose-side function reaches 0.25 µs. What was tried:
+
+- **`find_any` for JSON escapes** is already the fastest choice on x86-64. On the
+  entry's strings (a timestamp, a username, bodies of 10 and 140 bytes), the 34-byte
+  set's SSSE3 table path takes 7 ns a string, two SSE2 scans (the control range, then
+  `"` and `\`) 13 ns, and a byte loop over a table 24 ns. `json_string` costs about
+  0.2 µs a request at 29 calls.
+- **SQLite at `-O3`** (`c_flags_cc` in goose-sqlite's `sqlite.build`), as kensac
+  builds it: 32.5 to 32.7 µs against 32.6 to 32.9 at `-O2` in three alternating rounds
+  (`ab.sh 3 base o3`), in noise. Not kept.
+- **SHA-256** looks costly in callgrind (9,000 instructions a block), but valgrind
+  hides SHA-NI, so callgrind runs goose-hash's scalar rounds. On the CPU, `sha256_x86`
+  is 0.06% of samples. Read callgrind's hash and SIMD costs with that in mind.
+- goose-simd (gooseverse) is C intrinsics behind `c_headers`: Plod can't take it, and
+  nothing in the profile would.
+
+Writes: with `LIKE_PROB=0 POST_PROB=0` the entry costs 32.7 to 33.0 µs a request
+against 32.4 to 32.6 with writes, two rounds each. A user's loop costs 65.7 µs without
+writes and 70.5 µs with them, so a write costs about 28 µs, less than an average read;
+`pwrite64` is 3.5% of samples inclusive, 1.2 µs a request. At this load a 1 ms pass
+holds under one write, so group commit would rarely group, and its best case is
+under 0.6 µs a request. It needs a pass-end hook that goose-http doesn't have, so it
+wasn't built. The writes do cause the p99 tail: without them p99 is 2 ms.
+
+Scaled by kensac's ratio here (310,000 users at 27.35 µs), 32.7 µs estimates about
+259,000 users. The Mac's kernel time (12 µs, closer to a box without Docker's bridge)
+with this machine's user times gives (12 + 10.2) / (12 + 4.65), about 233,000. Either
+is above goose-iouring-davidhsv (220,000) and near fsharp-kestrel-delneg (247,000) and
+csharp-kestrel-mbobka (260,000).
+
+goose-http `direct-descriptors`: its whole `scripts/test.sh` passed on this machine
+once a close waits for its shutdown in flight. Before that, h2spec over TLS on
+`LOOP=uring-direct` failed 47 of 200 runs of `generic/2` (0 of 200 on `uring`): the
+kernel runs a shutdown from io-wq and finds a fixed file by its slot only then, so a
+connection's `SHUT_WR` reached the next connection accepted into its slot. After the
+fix, 0 of 600 (goose-http's decisions, "Direct descriptors").
+
 ### Open
 
-- **User time**: 9.7 µs against 4. In callgrind, SQLite's VDBE and B-tree are about
-  70%; the rest is goose-http, Plod, and the JSON writer. The box is x86-64, where
-  Goose's SIMD paths differ from arm64's, so profile there.
-- **Writes**: 0.76 `pwrite64` a request, about 4.5 a write, each commit writing its own
-  WAL frames. Group commit (step 3) would share them; worth about 0.5 µs a request
-  here, more at the box's rate.
-- **goose-http `direct-descriptors`**: run the rest of `scripts/test.sh` and h2spec,
-  on x86-64; then release goose-http with both branches, for the entry to import a tag.
+- **User time**: 10.2 µs against 4.65 on x86-64, of which SQLite is 7.6 µs. The
+  framework's share is about 2.5 µs, with no single function above 0.25 µs.
+- **Writes**: 0.76 `pwrite64` a request. Group commit (step 3) would share WAL frames
+  only at rates where a pass holds several writes; it needs a goose-http hook at the
+  end of a pass.
+- **p99 with writes**: 52 to 118 ms against kensac's 2 ms, and 2 ms without writes,
+  likely the WAL checkpoint (`wal_autocheckpoint = 16000`) running on the one worker.
+  Within the challenge's 1 s.
+- **Releases**: goose-http with `batched-waits` and `direct-descriptors`, and
+  goose-sqlite with `query`, for the entry to import tags.
 
 ### Next
 
-Moved to an x86-64 machine (2026-11-12), with the scripts in `bench/twelve-dollar/`: finish `direct-descriptors`' tests there,
-re-measure the entry on x86-64, and look for Goose-level wins where a profile shows
-them (vector scans, bounds checks), including gooseverse's goose-simd.
+Release goose-http and goose-sqlite, point the entry at their tags, and measure a
+5-minute hold on a 1 vCPU VM.
 
 ## Acceptance criteria
 
-- [ ] goose-sqlite's tests pass on Linux x86_64
+- [x] goose-sqlite's tests pass on Linux x86_64 (branch `query`, WSL2 Ubuntu 26.04,
+      2026-11-12)
 - [ ] The query layer is in a goose-sqlite release
 - [ ] The group-commit decision is in `docs/decisions.md` and `docs/architecture.md`
 - [x] The entry passes the challenge's `test/run.sh`, 42 checks (macOS arm64, and
