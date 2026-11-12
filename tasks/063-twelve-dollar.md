@@ -74,6 +74,29 @@ Built 2026-11-12, local commits only:
   write commits alone in WAL with `synchronous=NORMAL`. Whether group commit saves
   kernel time stays open below.
 
+Continued 2026-11-12, local commits only:
+
+- goose-http `batched-waits` (worktree `../goose-http-batched-waits`):
+  `Config.ring_batch_us`, a wait that holds for up to 256 completions, never past the
+  next timer, default 0; with its test, decision, and architecture entry, and the
+  Ubuntu 24.04 ALPN trap in `docs/known-issues.md`. Its whole `scripts/test.sh` passed
+  in an Ubuntu 26.04 arm64 container.
+- goose-http `direct-descriptors`, on top of it (`../goose-http-direct`):
+  `Config.ring_direct`, connections as io_uring direct descriptors, rings added as
+  tables fill, up to 16, peer addresses from single-shot accepts; `LOOP=uring-direct`
+  in the benchmark server and `scripts/test.sh`; test, decision, architecture. Its
+  tests passed through the uring-direct HTTP tests, whose fd-limit step now skips
+  for direct descriptors; the steps after it (epoll loop, echo, examples) and h2spec
+  (x86-64 only) haven't run on this branch.
+- Plod `json-string` (`../plod-json-string`): `format_fields` writes strings with
+  `http::json_string`, and the stdlib's byte-at-a-time scan is in
+  `docs/goose-findings.md`. Plod's `scripts/test.sh` passed on macOS.
+- The entry: one process, `ring_direct`, `ring_batch_us: 1000`,
+  `locking_mode = EXCLUSIVE`, `wal_autocheckpoint = 16000`, and `http::json_string`.
+  It imports goose-http at `@direct-descriptors`, which builds only with that
+  worktree mounted in the package cache as the ref (`../twelve-bench/build-gh.sh`)
+  until the branch is pushed or released. It passes the 42 checks on Linux arm64.
+
 ### Measured
 
 Docker on an M1 Pro, Linux arm64, server container 1 CPU and 2 GB, k6 1.3.0 in another
@@ -110,41 +133,62 @@ estimate about 112,000 users: above Axum (76,000) and Go's net/http (55,000), be
 uWebSockets (125,000) and Kestrel (260,000). One process, at 28.6 µs, would estimate
 about 173,000.
 
+### Measured, 2026-11-12, second session
+
+The same setup. The Mac was loaded by other work for much of the session, and runs
+drifted up to 40%, so changes were compared in alternating rounds, by the lowest of
+each, or by counts (`perf stat`, callgrind) that load doesn't move. perf works in
+Docker's VM (Linux 7.0) as cpu-clock samples from a privileged Alpine container
+(`../twelve-bench/perf.sh`, `count.sh`, `ab.sh`). A quiet stretch at the end gave
+these, two runs each:
+
+| Server | µs a request | user | kernel |
+|---|---:|---:|---:|
+| rust-iouring-kensac | 15.6 to 16.2 | 3.9 to 4.1 | 11.7 to 12.0 |
+| entry, 3 processes, before this session | 42.0 to 42.7 | 17.2 to 17.5 | 24.8 to 25.2 |
+| entry, 1 process, all of the below | 21.4 to 22.0 | 9.7 to 10.0 | 11.7 to 11.9 |
+
+What moved it:
+
+- **One process.** With 3 processes, `pread64` was 10% of samples: each commit
+  changes the WAL, so the other processes drop their whole page cache at their next
+  read. With 1 it was 0.15%. Direct descriptors make one process possible: at 4,000
+  connections they cost nothing measurable (21.4 µs in three rounds against 21.1 to
+  22.8), and with `RLIMIT_NOFILE` at 512 the load ran on 8 rings, no failures, the
+  process holding 16 descriptors; each extra ring costs an enter a pass.
+- **`locking_mode = EXCLUSIVE`**: no `fcntl` locks or `-shm` per transaction, as kensac's
+  `unix-excl` VFS. 39.5 → 36.3 µs at the best of three rounds (busy machine).
+- **Batched waits**, 1 ms: `io_uring_enter` 1.14 → 0.11 a request, context switches
+  0.38 → 0.11; lower CPU in each of three rounds, by 3 to 7 µs.
+- **`wal_autocheckpoint` 16,000** against 4,000: 32.6 against 36.6 at best, in noise.
+- **`http::json_string`**: the stdlib's escape loop was 85% of the feed handler's own
+  samples; 100,365 → 97,042 instructions a request. On arm64 `find_any` has no vector
+  path; x86-64's SSE2 path should save more.
+- Not worth it: a 64 MB page cache (page reads stay 0.03 a request at 16 MB), and one
+  read transaction per pass (starting one costs 750 instructions a request with
+  exclusive locking).
+
+Kernel time now equals kensac's; the user-time gap is 6 µs. Scaled by kensac's ratio,
+21.7 µs estimates about 227,000 users: above goose-iouring-davidhsv (220,000), below
+fsharp-kestrel-delneg (247,000), csharp-kestrel-mbobka (260,000), and
+csharp-kestrel-btree-mbobka (280,000); far above rust-axum-tbsvttr (76,000).
+
 ### Open
 
-- **Connections past `LimitNOFILE` in one process.** Every k6 user holds a
-  connection, and the box gives a process 65,535 descriptors. The leaders take them as
-  io_uring direct descriptors, across several rings in one process. goose-http has
-  neither, so the entry runs one process per 64,000 connections, and each process
-  more costs about 8 µs a request (above). That is a goose-http change; one process
-  would cost 28.6 µs here, about 1.6 times kensac.
-- **Kernel time**: 16 µs a request against kensac's 12. kensac waits for up to 256
-  completions or 1 ms per pass and commits a pass's writes together; goose-http
-  answers each wake at once. Not measured apart.
-- **User time**: 12.5 µs against 4. Most is SQLite's bytecode engine for the feed's 20
-  rows and their like counts; kensac reads the B-tree directly, which the rules allow
-  but this entry, as an application written on Plod, doesn't.
+- **User time**: 9.7 µs against 4. In callgrind, SQLite's VDBE and B-tree are about
+  70%; the rest is goose-http, Plod, and the JSON writer. The box is x86-64, where
+  Goose's SIMD paths differ from arm64's, so profile there.
+- **Writes**: 0.76 `pwrite64` a request, about 4.5 a write, each commit writing its own
+  WAL frames. Group commit (step 3) would share them; worth about 0.5 µs a request
+  here, more at the box's rate.
+- **goose-http `direct-descriptors`**: run the rest of `scripts/test.sh` and h2spec,
+  on x86-64; then release goose-http with both branches, for the entry to import a tag.
 
 ### Next
 
-Agreed for the next session (2026-11-12), both in goose-http, with no Plod change:
-
-1. **Batched waits**, first, as it is small and shows how much of the kernel gap is
-   wake-ups: `ur_wait`'s `io_uring_submit_and_wait_timeout(…, 1, …)` waits for up to
-   N completions or a cap such as 1 ms, never past the next timer, behind a `Config`
-   field whose default keeps today's behaviour. Linux 6.12's minimum wait does it
-   more exactly; the box runs 6.8.
-2. **Direct descriptors, then rings past the first.** Accept into the ring's file
-   table and send and receive on fixed files, keeping the epoll emulation on plain
-   descriptors. Four spots need care: the client address (`net_peer`'s `getpeername`;
-   single-shot accepts that return it instead), the inline `send(2)` for sends of
-   64 KB or more, `ur_send_file`'s splice (`SPLICE_F_FD_IN_FIXED`), and the
-   emulation. Then a worker adds a ring when one is near 65,535 connections; the
-   extra rings report to the first by a poll on their descriptors, so the loop still
-   waits in one place.
-
-Look for other quick wins before starting either: profile the 3-process entry again,
-kernel side included.
+Moved to an x86-64 machine (2026-11-12), with the scripts in `bench/twelve-dollar/`: finish `direct-descriptors`' tests there,
+re-measure the entry on x86-64, and look for Goose-level wins where a profile shows
+them (vector scans, bounds checks), including gooseverse's goose-simd.
 
 ## Acceptance criteria
 
