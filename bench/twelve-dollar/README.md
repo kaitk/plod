@@ -4,7 +4,16 @@ Task 063 records what these measured. Each script needs `G`, the folder that hol
 the checkouts: the fork's `twelve-dollar-plod` (branch `goose-plod-kaitk`),
 goose-sqlite's branch `query` as `goose-sqlite-query`, and for `build-gh.sh` a
 goose-http checkout. Output and caches (`k6/`, `bins/`, `cg/`, `perf/`, `goose-home4/`,
-`kensac/`) go beside the scripts; keep them out of commits.
+`kensac/`) go beside the scripts, and `.gitignore` keeps them out of commits.
+
+The seed comes from the challenge's `seed/make-seed.sh`, which needs Node and the
+sqlite3 CLI; `docker run --rm -v $G/twelve-dollar-plod:/w -w /w node:22-bookworm bash -c
+"apt-get update && apt-get install -y sqlite3 && bash seed/make-seed.sh"` runs it
+without either. On a Linux host, Docker keeps file owners, so the containers' users
+need write access to what they write: `deploy` (uid 1001) to
+`submissions/goose-plod-kaitk/`, `goose-home4/`, and `kensac/`, and k6's user to
+`k6/`, `perf/`, `cg/`, and `bins/` (`chmod 777` is enough). Docker Desktop on macOS
+maps owners and needs neither.
 
 - `box/`, `kbox/`, `vbox/`, `pbox/`: the images `twelve-box` (the entry's install.sh),
   `kensac-box` (kensac's install.sh), `twelve-vg` (twelve-box with valgrind), and
