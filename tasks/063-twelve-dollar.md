@@ -218,6 +218,14 @@ without SQL. No Goose-side function reaches 0.25 µs. What was tried:
 - **SQLite at `-O3`** (`c_flags_cc` in goose-sqlite's `sqlite.build`), as kensac
   builds it: 32.5 to 32.7 µs against 32.6 to 32.9 at `-O2` in three alternating rounds
   (`ab.sh 3 base o3`), in noise. Not kept.
+- **The whole program at `-O3 -march=native`**, through a `gcc` wrapper passed to
+  `--cc` ([findings](../docs/goose-findings.md#goose-build-takes-no-c-compiler-flags)):
+  a program's `c_flags_cc` reaches only its own `c_sources`, not the generated C, the
+  runtime, or the packages. 33.0 to 33.2 µs (user 10.4 to 10.6) against 32.6 to 33.7
+  (user 10.1 to 10.3) at `-O2`, three alternating rounds (`ab.sh 3 o2 o3n`,
+  2026-11-12). SQLite is most of the user time and gains nothing; HttpArena's h3 gain
+  came from `copy_into`, which isn't hot here. Not kept. The rules allow it (rule 10
+  builds on the box, and kensac builds with `target-cpu=native`).
 - **SHA-256** looks costly in callgrind (9,000 instructions a block), but valgrind
   hides SHA-NI, so callgrind runs goose-hash's scalar rounds. On the CPU, `sha256_x86`
   is 0.06% of samples. Read callgrind's hash and SIMD costs with that in mind.
