@@ -157,6 +157,59 @@ program whose own struct holds an optional reference beside others still does.
 Workaround: move the store into a function that takes the field's type by reference,
 `fn cut(r: Inner&) { r.path = r.path[1..]; }`, called as `cut(r)`.
 
+### A guard changes which root a block parameter's slice has
+
+Found on `6c1fbc7` (release `v2026.4`), the $12 entry (task 063). Status: open
+
+In a block whose parameter is a struct of slices into the callee's buffer, a `guard` at
+the block's top changes the root that §9.2's rebinding check gives those slices. With
+`guard t.exp < 0 else { return; }` the program below doesn't compile; with the same
+test written `if !(t.exp < 0) { return; }`, or with no test at all, it compiles and
+prints `b`. The error names static data as `name`'s first root, though `t.payload` is a
+slice of `verify`'s `buf`. In the entry, with Plod's `jwt_verify`, the same guard named
+`keys`, a parameter of `verify` the payload doesn't come from. Expected: a `guard` and
+the `if` it stands for give the same roots, and the error names the buffer the slice is
+in.
+
+    import std;
+    import json;
+
+    struct Tok { sub: const u8[:] = "", exp: i64 = -1, payload: const u8[:] = "" }
+
+    fn verify<F>(token: const u8[:]) {
+        var buf: u8[>..] = [];
+        format(buf, token);
+        var p = json::reader(buf[..]);
+        var t = Tok { sub: p.text[..0], payload: p.text };
+        json::each_member(p) { key =>
+            if key == "sub" { t.sub = json::read_string(p, buf); } else { json::skip(p); }
+        };
+        F(t);
+    }
+
+    fn main() {
+        verify("{\"sub\":\"b\"}") { t =>
+            guard t.exp < 0 else { return; }
+            var scratch: u8[>..] = [];
+            var r = json::reader(t.payload);
+            var name = r.text[..0];
+            json::each_member(r) { key =>
+                name = json::read_string(r, scratch);
+            };
+            print(name);
+        };
+    }
+
+    min.goose:24: error: re-binding name with a reference rooted at a different scope
+    depth is not supported; declare a new variable (§9.2): name is bound to one rooted
+    at static data, and this one is rooted at scratch
+
+The `sub` field, assigned from `read_string(p, buf)` in `verify`, is needed: with `t`
+built in one literal, all three forms fail alike, on `buf` against `r`.
+
+Workaround: put the guard after the code that rebinds the slice, as the entry does, or
+write it as an `if`.
+
 ### A long-distance return can't carry a slice a caller passed in
 
 Found on `a6249a4`, spike 03. Status: open; still fails on `46356c2`
