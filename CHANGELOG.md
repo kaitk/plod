@@ -3,6 +3,20 @@
 What each tag adds. Each release names the Goose compiler it was built and tested with.
 Plod was named goose-rest up to `v0.3.4`; the entries before `v0.4.0` keep that name.
 
+## v0.5.12 (2026-11-12)
+
+goose-http `v0.5.19` and Goose `v2026.4`. goose-compress `v0.1.4`; `plod.websocket`
+and `plod.jwt` declare goose-hash `v0.0.4`, and `plod.tls` and `plod.h3` goose-tls
+`v0.0.6`. No breaking changes.
+
+Changed:
+
+- goose-http `v0.5.19`, from `v0.5.16`: `Config.ring_batch_us` and `Config.ring_direct`
+  on io_uring, which a server sets in its `Config` as before, and a WebSocket client.
+- Goose `v2026.4`, from `v2026.3`.
+- Fields' strings in JSON bodies are escaped with `http::json_string`, which scans for
+  the bytes to escape with the runtime's vector search.
+
 ## v0.5.11 (2026-10-30)
 
 A security fix for compressed responses in pieces. Goose `v2026.3`, goose-http
