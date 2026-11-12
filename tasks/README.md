@@ -65,6 +65,7 @@ Work can start at any point unless the table says otherwise.
 | 059: Ari's logo as SVG | After 046's PNG logo; any time. |
 | 047: HttpArena | On the board since 2026-10-25, every profile but gRPC; the `emerging` tier is left. |
 | 052: database work on lanes | goose-postgres's and goose-sqlite's decisions and tasks; beside 047. |
+| 063: the $12 Server Challenge | goose-sqlite on x86_64 and its query layer, then group commit, then the entry in the fork. |
 | 053: a contained scope in Goose | A design note only; it builds on task 051, cancelled on 2026-10-21, so it waits until restarts are pursued. |
 | 048: Aegon in the REST benchmark | Built and checked on the desktop, without tier D; the nightly run measures it. |
 | 061: viltrum | goose-http's tasks 065 and 066 are on Plod's pin, and viltrum runs in `bench/httparena.sh` and the REST tiers; its "Next" lists what's left: ring entries, the router gap, once-campfire. |
