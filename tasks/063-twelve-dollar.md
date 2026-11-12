@@ -125,6 +125,27 @@ about 173,000.
   rows and their like counts; kensac reads the B-tree directly, which the rules allow
   but this entry, as an application written on Plod, doesn't.
 
+### Next
+
+Agreed for the next session (2026-11-12), both in goose-http, with no Plod change:
+
+1. **Batched waits**, first, as it is small and shows how much of the kernel gap is
+   wake-ups: `ur_wait`'s `io_uring_submit_and_wait_timeout(…, 1, …)` waits for up to
+   N completions or a cap such as 1 ms, never past the next timer, behind a `Config`
+   field whose default keeps today's behaviour. Linux 6.12's minimum wait does it
+   more exactly; the box runs 6.8.
+2. **Direct descriptors, then rings past the first.** Accept into the ring's file
+   table and send and receive on fixed files, keeping the epoll emulation on plain
+   descriptors. Four spots need care: the client address (`net_peer`'s `getpeername`;
+   single-shot accepts that return it instead), the inline `send(2)` for sends of
+   64 KB or more, `ur_send_file`'s splice (`SPLICE_F_FD_IN_FIXED`), and the
+   emulation. Then a worker adds a ring when one is near 65,535 connections; the
+   extra rings report to the first by a poll on their descriptors, so the loop still
+   waits in one place.
+
+Look for other quick wins before starting either: profile the 3-process entry again,
+kernel side included.
+
 ## Acceptance criteria
 
 - [ ] goose-sqlite's tests pass on Linux x86_64
