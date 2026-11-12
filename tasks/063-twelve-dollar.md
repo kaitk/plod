@@ -1,7 +1,7 @@
 # 063: The $12 Server Challenge
 
-Status: in-progress (2026-11-12). The entry passes the challenge's 42 checks on
-macOS and on Linux; see "State".
+Status: in-progress (2026-11-12). Submitted as #417, waiting for the board's score; see
+"State".
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -269,9 +269,18 @@ Released 2026-11-12: goose-http `v0.5.19` (both branches), goose-sqlite `v0.0.4`
 imports them (fork commit `0f1e8f2`): built with an empty package cache, it passes the
 42 checks and measures 32.6 and 32.8 µs a request, as before.
 
+Submitted 2026-11-12 as
+[#417](https://github.com/arjaythedev/twelve-dollar-server-challenge/pull/417), head
+`8cfed51`, CI green. Before submitting, the entry was checked against the failures and
+rule flags the leaderboard records, and one held: it accepted a token without `exp`,
+which SPEC.md requires and the review flags in over 30 entries. `8cfed51` refuses one
+with 401. With 50,000 idle connections the server's RSS was 20 MB, about 0.3 KB a
+connection.
+
 ### Next
 
-Measure a 5-minute hold on a 1 vCPU VM, then open the pull request upstream.
+Record the board's score for #417. The maintainer scores open pull requests on the
+board's box as they come in, so no hold of our own on a VM is needed.
 
 ## Acceptance criteria
 
@@ -281,5 +290,5 @@ Measure a 5-minute hold on a 1 vCPU VM, then open the pull request upstream.
 - [ ] The group-commit decision is in `docs/decisions.md` and `docs/architecture.md`
 - [x] The entry passes the challenge's `test/run.sh`, 42 checks (macOS arm64, and
       Linux arm64 in Docker, 2026-11-12)
-- [ ] A 5-minute hold measured on a 1 vCPU VM, recorded here
-- [ ] The pull request is open upstream
+- [x] The pull request is open upstream (#417, 2026-11-12)
+- [ ] The board's 5-minute hold for #417, recorded here
