@@ -2,7 +2,7 @@
 namespace plod;
 
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.16";
+import http from "github.com/kaitk/goose-http@v0.5.19";
 
 struct SecurityHeaders {
     nosniff: bool = true,
