@@ -106,6 +106,20 @@ fn emit(out: u8[>..]&, ns: const u8[:], handlers: const u8[:], source: const u8[
     format(out, "namespace ", ns, ";\n\nimport std;\nimport json;\n");
     if needs_http { out.append("import http;\n"); }
     if needs_plod { out.append("import plod;\n"); }
+    var reads_str = false;
+    for f in fields { if f.ty.kind == K_STR { reads_str = true; } }
+    if reads_str && objs.len > 0 {
+        out.append("""
+
+            // An empty string rooted as json::read_string's result is, whichever slice
+            // it returns, so a reader's variable can be rebound to that result.
+            fn no_string(r: json::Reader&, scratch: u8[>..]&) -> const u8[:] {
+                if r.pos < 0 { return scratch[..0]; }
+                return r.text[..0];
+            }
+
+            """);
+    }
     for e in enums { emit_enum(out, e, variants); }
     for o in objs { emit_obj(out, ns, o, objs, enums, fields, variants); }
 }
@@ -207,7 +221,7 @@ fn emit_obj(out: u8[>..]&, ns: const u8[:], o: Obj, objs, enums, fields, variant
             if k == K_BOOL { out.append("false"); }
             else if k == K_INT { out.append("0"); }
             else if k == K_NUM { out.append("0.0"); }
-            else if k == K_STR { out.append("r.text[..0]"); }
+            else if k == K_STR { out.append("no_string(r, scratch)"); }
             else if k == K_ENUM { format(out, enums[f.ty.ref].name, ".", variants[enums[f.ty.ref].first]); }
             out.append(";\n");
         }

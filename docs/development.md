@@ -46,8 +46,10 @@ CHANGELOG.md      what each tag adds
 
 ## Get Goose
 
-The scripts use the official Goose release that `scripts/goose.sh` pins: `v2026.3`
-(`8511ae3`), since 2026-10-21. It has
+The scripts use the official Goose release that `scripts/goose.sh` pins: `v2026.4`
+(`6c1fbc7`), since 2026-11-12. Plod `v0.5.11` and earlier were built with `v2026.3`,
+whose looser reference check accepted the generated readers' `r.text[..0]`; their
+generated code doesn't compile with `v2026.4`. It has
 [aardappel/goose#37](https://github.com/aardappel/goose/pull/37), which the pinned
 goose-http's `http::run` and `http::lane_open` need, and
 [#41](https://github.com/aardappel/goose/pull/41), gcc's `ByteSet` miscompile, for which

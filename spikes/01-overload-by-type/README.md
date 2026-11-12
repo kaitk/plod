@@ -5,7 +5,7 @@ Checks whether `take<T>(cx)`, which declares `var v = default<T>()` and calls
 to a trailing block: `take<Session>(cx) { s => ... }`. This is the extractor design in
 [the decisions](../../docs/decisions.md#extractors).
 
-Goose: commit `f114b5a`, the pin, with the same output as on release `v2026.2` (`3ee3871`), `v2026.1` (`ac759c3`), `bc3c1f1` and `a6249a4`.
+Goose: release `v2026.4` (`6c1fbc7`), the pin, with the same output as on commit `f114b5a`, release `v2026.2` (`3ee3871`), `v2026.1` (`ac759c3`), `bc3c1f1` and `a6249a4`.
 
 ```sh
 GOOSE=<build>/goose

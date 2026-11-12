@@ -210,7 +210,11 @@ From spec §3, §4.3, §7.8, and §11.2, condensed in the language author's thre
 - A `u8[]` field can't grow or be assigned after construction, nor can a struct holding
   one (§4.4). A reader keeps each `json::read_string` slice as its key arrives, in any
   order, then builds the struct with one literal, in place, with no copy. Each slice
-  starts as `r.text[..0]`, not `""`. A limited-array field that a repeated key appends
+  starts as `no_string(r, scratch)`, a helper each generated file holds, which returns
+  an empty slice of the text or of `scratch` as `json::read_string` does, so it takes
+  the same root at every call site. `r.text[..0]` did until Goose `v2026.4`, whose
+  check roots `read_string`'s result at `scratch` where the caller owns both buffers
+  apart (2026-11-12). A limited-array field that a repeated key appends
   to overruns its capacity and aborts (§3.3): clear it first, or use the same pattern.
 - A nested object can't be read into a local and then put in the struct, for the same
   reason. The reader records where each nested object or array starts, skips it, and
