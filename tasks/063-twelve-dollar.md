@@ -255,19 +255,21 @@ fix, 0 of 600 (goose-http's decisions, "Direct descriptors").
 - **p99 with writes**: 52 to 118 ms against kensac's 2 ms, and 2 ms without writes,
   likely the WAL checkpoint (`wal_autocheckpoint = 16000`) running on the one worker.
   Within the challenge's 1 s.
-- **Releases**: goose-http with `batched-waits` and `direct-descriptors`, and
-  goose-sqlite with `query`, for the entry to import tags.
+
+Released 2026-11-12: goose-http `v0.5.19` (both branches), goose-sqlite `v0.0.4`
+(`query`), and Plod `v0.5.12` (goose-http `v0.5.19`, Goose `v2026.4`). The entry
+imports them (fork commit `0f1e8f2`): built with an empty package cache, it passes the
+42 checks and measures 32.6 and 32.8 µs a request, as before.
 
 ### Next
 
-Release goose-http and goose-sqlite, point the entry at their tags, and measure a
-5-minute hold on a 1 vCPU VM.
+Measure a 5-minute hold on a 1 vCPU VM, then open the pull request upstream.
 
 ## Acceptance criteria
 
 - [x] goose-sqlite's tests pass on Linux x86_64 (branch `query`, WSL2 Ubuntu 26.04,
       2026-11-12)
-- [ ] The query layer is in a goose-sqlite release
+- [x] The query layer is in a goose-sqlite release (`v0.0.4`, 2026-11-12)
 - [ ] The group-commit decision is in `docs/decisions.md` and `docs/architecture.md`
 - [x] The entry passes the challenge's `test/run.sh`, 42 checks (macOS arm64, and
       Linux arm64 in Docker, 2026-11-12)
