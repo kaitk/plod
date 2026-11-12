@@ -7,6 +7,13 @@ import json;
 import http;
 import plod;
 
+// An empty string rooted as json::read_string's result is, whichever slice
+// it returns, so a reader's variable can be rebound to that result.
+fn no_string(r: json::Reader&, scratch: u8[>..]&) -> const u8[:] {
+    if r.pos < 0 { return scratch[..0]; }
+    return r.text[..0];
+}
+
 // #/components/schemas/Status
 struct Status {
     name: u8[..128],
@@ -19,7 +26,7 @@ struct Status {
 // Reads the Status at the cursor, checks it, and builds it once. Errors
 // are sticky, as json::Reader's are: after one, it returns an empty value.
 fn read_status(r: json::Reader&, scratch: u8[>..]&) -> Status {
-    var name = r.text[..0];
+    var name = no_string(r, scratch);
     var has_name = false;
     var temp_mc = 0;
     var has_temp_mc = false;
@@ -116,7 +123,7 @@ struct Settings {
 // Reads the Settings at the cursor, checks it, and builds it once. Errors
 // are sticky, as json::Reader's are: after one, it returns an empty value.
 fn read_settings(r: json::Reader&, scratch: u8[>..]&) -> Settings {
-    var name = r.text[..0];
+    var name = no_string(r, scratch);
     var has_name = false;
     var brightness = 0;
     var has_brightness = false;
@@ -192,9 +199,9 @@ struct FirmwareUpload {
 // Reads the FirmwareUpload at the cursor, checks it, and builds it once. Errors
 // are sticky, as json::Reader's are: after one, it returns an empty value.
 fn read_firmware_upload(r: json::Reader&, scratch: u8[>..]&) -> FirmwareUpload {
-    var version = r.text[..0];
+    var version = no_string(r, scratch);
     var has_version = false;
-    var image = r.text[..0];
+    var image = no_string(r, scratch);
     var has_image = false;
     json::each_member(r) { key =>
         match key.len {
@@ -258,11 +265,11 @@ struct Firmware {
 // Reads the Firmware at the cursor, checks it, and builds it once. Errors
 // are sticky, as json::Reader's are: after one, it returns an empty value.
 fn read_firmware(r: json::Reader&, scratch: u8[>..]&) -> Firmware {
-    var version = r.text[..0];
+    var version = no_string(r, scratch);
     var has_version = false;
     var bytes = 0;
     var has_bytes = false;
-    var crc32 = r.text[..0];
+    var crc32 = no_string(r, scratch);
     var has_crc32 = false;
     json::each_member(r) { key =>
         match key.len {

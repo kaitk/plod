@@ -7,6 +7,13 @@ import json;
 import http;
 import plod;
 
+// An empty string rooted as json::read_string's result is, whichever slice
+// it returns, so a reader's variable can be rebound to that result.
+fn no_string(r: json::Reader&, scratch: u8[>..]&) -> const u8[:] {
+    if r.pos < 0 { return scratch[..0]; }
+    return r.text[..0];
+}
+
 // #/components/schemas/Settings/properties/mode
 enum SettingsMode { Auto, Manual }
 
@@ -40,7 +47,7 @@ struct Owner {
 fn read_owner(r: json::Reader&, scratch: u8[>..]&) -> Owner {
     var id = 0;
     var has_id = false;
-    var email = r.text[..0];
+    var email = no_string(r, scratch);
     var has_email = false;
     var email_null = false;
     json::each_member(r) { key =>
@@ -115,7 +122,7 @@ struct Settings {
 // Reads the Settings at the cursor, checks it, and builds it once. Errors
 // are sticky, as json::Reader's are: after one, it returns an empty value.
 fn read_settings(r: json::Reader&, scratch: u8[>..]&) -> Settings {
-    var name = r.text[..0];
+    var name = no_string(r, scratch);
     var has_name = false;
     var brightness = 0;
     var has_brightness = false;

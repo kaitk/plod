@@ -5,7 +5,7 @@ Checks whether three nested middleware blocks (`plod::with_cors`, `with_auth`,
 spike 03) compile to one function, with no function pointers and no call frame per
 layer.
 
-Goose: commit `f114b5a`, the pin, with the same output as on release `v2026.2` (`3ee3871`), `v2026.1` (`ac759c3`), `bc3c1f1` and `a6249a4`. C compiler: Clang 21.1.8, x86-64 Linux.
+Goose: release `v2026.4` (`6c1fbc7`), the pin, with the same output as on commit `f114b5a`, release `v2026.2` (`3ee3871`), `v2026.1` (`ac759c3`), `bc3c1f1` and `a6249a4`. C compiler: Clang 21.1.8, x86-64 Linux.
 
 ```sh
 GOOSE=<build>/goose

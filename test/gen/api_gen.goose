@@ -7,6 +7,13 @@ import json;
 import http;
 import plod;
 
+// An empty string rooted as json::read_string's result is, whichever slice
+// it returns, so a reader's variable can be rebound to that result.
+fn no_string(r: json::Reader&, scratch: u8[>..]&) -> const u8[:] {
+    if r.pos < 0 { return scratch[..0]; }
+    return r.text[..0];
+}
+
 // #/components/schemas/Status
 enum Status { Active, Archived, InReview }
 
@@ -80,9 +87,9 @@ struct ProjectCreate {
 // Reads the ProjectCreate at the cursor, checks it, and builds it once. Errors
 // are sticky, as json::Reader's are: after one, it returns an empty value.
 fn read_project_create(r: json::Reader&, scratch: u8[>..]&) -> ProjectCreate {
-    var name = r.text[..0];
+    var name = no_string(r, scratch);
     var has_name = false;
-    var color = r.text[..0];
+    var color = no_string(r, scratch);
     var has_color = false;
     var status = Status.Active;
     var has_status = false;
@@ -170,9 +177,9 @@ struct Owner {
 fn read_owner(r: json::Reader&, scratch: u8[>..]&) -> Owner {
     var id = 0;
     var has_id = false;
-    var email = r.text[..0];
+    var email = no_string(r, scratch);
     var has_email = false;
-    var display_name = r.text[..0];
+    var display_name = no_string(r, scratch);
     var has_display_name = false;
     var display_name_null = false;
     json::each_member(r) { key =>
@@ -278,7 +285,7 @@ struct Project {
 fn read_project(r: json::Reader&, scratch: u8[>..]&) -> Project {
     var id = 0;
     var has_id = false;
-    var name = r.text[..0];
+    var name = no_string(r, scratch);
     var has_name = false;
     var status = Status.Active;
     var has_status = false;
@@ -296,19 +303,19 @@ fn read_project(r: json::Reader&, scratch: u8[>..]&) -> Project {
     var has_tags = false;
     var scores_at = -1;
     var has_scores = false;
-    var created_at = r.text[..0];
+    var created_at = no_string(r, scratch);
     var has_created_at = false;
-    var due_on = r.text[..0];
+    var due_on = no_string(r, scratch);
     var has_due_on = false;
     var due_on_null = false;
-    var ref = r.text[..0];
+    var ref = no_string(r, scratch);
     var has_ref = false;
     var kind = ProjectKind.Internal;
     var has_kind = false;
     var settings_at = -1;
     var has_settings = false;
     var settings_null = false;
-    var type_ = r.text[..0];
+    var type_ = no_string(r, scratch);
     var has_type_ = false;
     json::each_member(r) { key =>
         match key.len {

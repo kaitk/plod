@@ -15,7 +15,10 @@ Traps met while writing the generator and its tests (2026-10-13):
   Keep a one-line JSON document on one line.
 - A slice that starts as `""` can't later point into a buffer, nor into the JSON
   document: start it from that buffer (`r.text[..0]`), or return it from a function
-  (spike 05).
+  (spike 05). From Goose `v2026.4`, a slice that `json::read_string(r, scratch)` will
+  replace must start from a function with `read_string`'s two branches, as the
+  generator's `no_string` does: which buffer roots the result depends on the caller
+  (2026-11-12).
 - An optional reference field is rebound with `.=`, not assigned: `ty.minimum .= n`.
 - Mutually recursive emitters need `recursive fn`; split them instead where one level
   is enough (`write_value` and `write_one`).
