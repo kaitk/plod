@@ -7,6 +7,7 @@ namespace plod;
 
 import std;
 import json;
+import http;
 
 // Writes v as a JSON object: each field in declaration order, keyed by its
 // name.
@@ -52,8 +53,10 @@ fn field_json<T>(out: u8[>..]&, v: const T[:], rank: i32) { elements_json(out, v
 // slice's.
 fn field_json(out: u8[>..]&, v, rank: f64) { format(out, v); }
 
-// A u8 slice is a string; a slice of anything else, an array.
-fn elements_json(out: u8[>..]&, v: const u8[:], rank: i32) { json::format_string(out, v); }
+// A u8 slice is a string; a slice of anything else, an array. A string goes
+// through http::json_string, which writes what json::format_string does but
+// finds what to escape 16 bytes at a time (docs/goose-findings.md).
+fn elements_json(out: u8[>..]&, v: const u8[:], rank: i32) { http::json_string(out, v); }
 fn elements_json<T>(out: u8[>..]&, v: const T[:], rank: i32) {
     out.push('[');
     for e, i in v {

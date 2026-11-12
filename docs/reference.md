@@ -105,7 +105,7 @@ fn format(out: u8[>..]&, p: const Project&) { plod::format_fields(out, p); }
 | An integer type | a number, by `json::format_int`; a `u64` by Goose's `format`, since `format_int` takes an `i64` |
 | `f64`, `f32` | a number, by `json::format_number` |
 | `bool` | `true` or `false`, by `json::format_bool` |
-| A `u8` array or slice of any kind (`u8[..64]`, `u8[]`, `u8[16]`, `const u8[:]`) | a string, by `json::format_string` |
+| A `u8` array or slice of any kind (`u8[..64]`, `u8[]`, `u8[16]`, `const u8[:]`) | a string, by `http::json_string`, which writes what `json::format_string` does |
 | Another array or slice | an array, each element by these rules |
 | A struct or enum | by the program's `format` overload for it |
 | An optional | `null`, or its value by Goose's `format` |
