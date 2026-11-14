@@ -1,7 +1,8 @@
 # 063: The $12 Server Challenge
 
-Status: in-progress (2026-11-14). #417 scored 115,000 users; a follow-up with 1,024
-receive buffers waits to be opened; see "State".
+Status: in-progress (2026-11-14). #417 scored 115,000 users; the follow-up, #440,
+with 1,024 receive buffers and a checkpoint lane, waits to be merged and scored; see
+"The follow-up".
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -260,10 +261,9 @@ fix, 0 of 600 (goose-http's decisions, "Direct descriptors").
 - **Writes**: 0.76 `pwrite64` a request. Group commit (step 3) would share WAL frames
   only at rates where a pass holds several writes; it needs a goose-http hook at the
   end of a pass.
-- **p99 with writes**: 52 to 118 ms against kensac's 2 ms, and 2 ms without writes,
-  likely the WAL checkpoint (`wal_autocheckpoint = 16000`) running on the one worker.
-  Within the challenge's 1 s. A checkpoint lane halves it only on a slow disk (see
-  "The follow-up").
+- **p99 with writes**: 52 to 118 ms against kensac's 2 ms, and 2 ms without writes:
+  the WAL checkpoint running on the one worker. The checkpoint lane brings it to
+  2.5 to 2.7 ms on x86-64 (see "The follow-up").
 - **goose-http's receive buffers** (2026-11-14): 64 a ring is a CPU cliff past
   capacity. Raising the default costs every worker: HttpArena runs one a core, and
   1,024 would be 4 MB each. The better fix may be to queue the `ENOBUFS` receives
@@ -337,11 +337,11 @@ What was tried and left out:
   16,000 pages, which copies only the rest: with slow fsyncs, p99 38 to 44 ms against
   77 to 79 without the lane, max 122 to 128 against 247 to 258, two runs each; with
   normal fsyncs and at saturation, level (p99 202 to 355 against 235 to 274 ms at 0.4
-  CPU). A gain only on a slow disk, well inside the limits, for about 60 lines. Not
-  kept; the fork's branch `checkpoint-lane` (`5f54422`, on `b99d2ed`) holds it for the
-  x86-64 runs. The builds with RESTART exited with status 1 three times in about 20
-  runs, cause not found; the PASSIVE build and the buffers build ran 16 times without
-  one.
+  CPU). On the Mac, a gain only on a slow disk, well inside the limits, for about 60
+  lines; the fork's branch `checkpoint-lane` (`5f54422`, on `b99d2ed`) held it for the
+  x86-64 runs, where it was kept (below). The builds with RESTART exited with status
+  1 three times in about 20 runs, cause not found; the PASSIVE build and the buffers
+  build ran 16 times without one.
 - **Writes on a lane**, rejected before measuring: in WAL mode a commit on one
   connection empties the other's page cache, so the worker would lose its 16 MB cache
   on every write.
@@ -349,10 +349,63 @@ What was tried and left out:
 kensac checkpoints on a second thread at nice 19; Goose can't set a thread's priority,
 but the lane didn't need it, so it isn't in `docs/goose-findings.md`.
 
+#### Measured on x86-64
+
+The machine and setup of the third session: AMD Ryzen 7 5800X3D, WSL2 Ubuntu 26.04 on
+Linux 6.18.58.1-microsoft-standard-WSL2, Docker 29.8.2, twelve-box from the entry's
+`install.sh` (unchanged in all three builds), k6 1.3.0 in another container,
+`load-fast.js` with think times divided by 20, 60 s after a 15 s ramp, nothing else
+in Docker. Builds `v0` (`8cfed51`), `v1` (`b99d2ed`), and `v2` (`5f54422`) with
+`build.sh`; `v1` and `v2` pass the 42 checks. Three alternating rounds of each, with
+`ab.sh`, and kensac once at each load with `bench.sh`. No server exited early.
+
+`CPUS=0.4 VUS=10000 ab.sh 3 v0 v1 v2`, past capacity:
+
+| Build | req/s | p95 | p99 | max | µs a request | user | kernel |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| v0, 64 buffers | 9,897 to 9,931 | 529 to 551 ms | 623 to 878 ms | 853 to 2,493 ms | 35.1 to 35.2 | 8.9 to 9.6 | 25.6 to 26.2 |
+| v1, 1,024 buffers | 10,982 to 11,181 | 413 to 432 ms | 501 to 532 ms | 585 to 765 ms | 31.2 to 31.7 | 6.1 to 7.7 | 23.6 to 25.0 |
+| v2, v1 and the lane | 11,274 to 11,405 | 331 to 348 ms | 366 to 475 ms | 452 to 629 ms | 30.9 to 31.4 | 8.3 to 8.8 | 22.5 to 22.8 |
+| rust-iouring-kensac | 13,454 | 184 ms | 204 ms | 286 ms | 25.6 | 3.6 | 21.9 |
+
+`ab.sh 3 v0 v1 v2`, 1 CPU and 4,000 users, below capacity:
+
+| Build | req/s | p95 | p99 | max | µs a request |
+|---|---:|---:|---:|---:|---:|
+| v0, 64 buffers | 6,557 to 6,563 | 1.7 ms | 116 to 124 ms | 218 to 237 ms | 32.3 to 32.6 |
+| v1, 1,024 buffers | 6,544 to 6,563 | 1.7 ms | 115 to 123 ms | 237 to 254 ms | 32.3 to 32.6 |
+| v2, v1 and the lane | 6,586 to 6,591 | 1.6 ms | 2.5 to 2.7 ms | 58 to 82 ms | 32.5 to 32.7 |
+| rust-iouring-kensac | 6,588 | 1.4 ms | 1.8 ms | 28 ms | 27.1 |
+
+Decided (2026-11-14):
+
+- **Buffers kept.** Past capacity, v1 beat v0 in every round with no overlap: 12% more
+  requests a second, p95 a fifth lower, 11% less CPU a request, as on the Mac. Below
+  capacity the two are level.
+- **The lane kept.** Below capacity it takes p99 from 115 to 124 ms to 2.5 to 2.7 ms,
+  the tail that writes caused; past capacity, p95 is a fifth below v1's in every
+  round. CPU a request is level. On the Mac it gained only with fsyncs slowed to 20
+  ms. Why the checkpoint costs more on this machine wasn't measured, nor how fast
+  the box's disk syncs. `ring-buffers` was fast-forwarded to
+  `checkpoint-lane`, and the README's "How it works" now describes the lane and
+  `unix-excl`.
+
+The entry's README took these numbers (fork commit `ffd7b69`). #417 was squash-merged
+upstream, so `upstream/main` was merged into `ring-buffers` (`2192d45`), with the
+entry's folder as `ffd7b69` has it; the pull request's diff is the three changed
+files. `2192d45` passes the 42 checks against upstream's current tests.
+
+The follow-up is [#440](https://github.com/arjaythedev/twelve-dollar-server-challenge/pull/440),
+head `2192d45`, opened 2026-11-14; its CI job was running when this was written.
+
 ### Next
 
-Measure `8cfed51`, `b99d2ed`, and `5f54422` on x86-64, with kensac as the reference,
-then open the follow-up pull request from `ring-buffers`.
+Wait for #440 to be merged and scored, and record its hold here. Expected: past
+120,000, since 12% more requests a second at the cliff is about 130,000. The ceiling
+from CPU a request is about 230,000 to 260,000. The refusals at 160,000 are a separate
+limit that neither change addresses. Queuing `ENOBUFS`
+receives again only once buffers come back belongs in goose-http, as its own task
+(see "Open").
 
 ## Acceptance criteria
 
@@ -364,4 +417,5 @@ then open the follow-up pull request from `ring-buffers`.
       Linux arm64 in Docker, 2026-11-12)
 - [x] The pull request is open upstream (#417, 2026-11-12)
 - [x] The board's 5-minute hold for #417, recorded here (115,000 users, 2026-11-13)
-- [ ] The follow-up pull request is open upstream
+- [x] The follow-up pull request is open upstream (#440, 2026-11-14)
+- [ ] The board's hold for the follow-up, recorded here
