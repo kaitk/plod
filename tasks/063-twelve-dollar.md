@@ -1,8 +1,8 @@
 # 063: The $12 Server Challenge
 
 Status: in-progress (2026-11-14). #417 scored 115,000 users; the follow-up, #440,
-with 1,024 receive buffers and a checkpoint lane, waits to be merged and scored; see
-"The follow-up".
+with 1,024 receive buffers, a checkpoint lane, and the feed as range reads, waits to
+be merged and scored; see "The follow-up" and "Range reads and the re-arm".
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -266,8 +266,8 @@ fix, 0 of 600 (goose-http's decisions, "Direct descriptors").
   2.5 to 2.7 ms on x86-64 (see "The follow-up").
 - **goose-http's receive buffers** (2026-11-14): 64 a ring is a CPU cliff past
   capacity. Raising the default costs every worker: HttpArena runs one a core, and
-  1,024 would be 4 MB each. The better fix may be to queue the `ENOBUFS` receives
-  again only once buffers come back, in goose-http, as its own task.
+  1,024 would be 4 MB each. goose-http's branch `rearm` queues the `ENOBUFS`
+  receives again only once buffers come back (see "Range reads and the re-arm").
 
 Released 2026-11-12: goose-http `v0.5.19` (both branches), goose-sqlite `v0.0.4`
 (`query`), and Plod `v0.5.12` (goose-http `v0.5.19`, Goose `v2026.4`). The entry
@@ -398,15 +398,73 @@ files. `2192d45` passes the 42 checks against upstream's current tests.
 The follow-up is [#440](https://github.com/arjaythedev/twelve-dollar-server-challenge/pull/440),
 head `2192d45`, opened 2026-11-14; its CI job was running when this was written.
 
+### Range reads and the re-arm, 2026-11-14
+
+What the entries above 250,000 do that this one didn't, from their READMEs and source
+at upstream `7408eab`, by expected gain: re-arming `ENOBUFS` receives only once buffers
+come back (kensac, fsharp-uring-delneg); the feed as range reads (csharp-kestrel-mbobka,
+crystal-epoll-faustinoaq, fsharp-kestrel-delneg, −14% CPU a request on the board's box);
+one transaction a pass with group commit (all of them); PGO for SQLite (mbobka,
+crystal, delneg, −4.5%); and SQLite options, among them goose-sqlite's
+`DEFAULT_FOREIGN_KEYS=1`, which kensac doesn't set. HttpArena's leaders (viltrum)
+use epoll without SQPOLL or zero-copy sends, which fit neither one vCPU nor 5 KB
+responses. The board's row for #417 gives 41 µs a request against kensac's 25, a wider
+gap than the 1.2 measured here, so the box likely runs user code slower than the
+5800X3D and these runs understate gains in SQLite.
+
+The machine and setup of "Measured on x86-64" above, `ab.sh`, three alternating
+rounds. `v2` is #440's head (`2192d45`); `v3` adds the feed as three range reads: the
+20 newest ids from the index alone, then, when they are one run of consecutive ids,
+one `BETWEEN` scan of posts joined to users and one grouped `BETWEEN` scan of the likes
+index, else the plain query; `v4` adds a worker connection without foreign keys
+(`sqlite::open`'s `foreign_keys: false`). The feed's JSON is byte for byte the same,
+and both pass the 42 checks.
+
+| Build | Load | req/s | p95 | p99 | µs a request | user |
+|---|---|---:|---:|---:|---:|---:|
+| v2 | 0.4 CPU, 10,000 users | 10,948 to 11,414 | 323 to 408 ms | 343 to 445 ms | 30.9 to 32.3 | 8.1 to 9.0 |
+| v3 | 0.4 CPU, 10,000 users | 10,852 to 11,863 | 292 to 495 ms | 315 to 590 ms | 29.5 to 33.5 | 5.7 to 7.9 |
+| v4 | 0.4 CPU, 10,000 users | 11,670 to 12,018 | 277 to 312 ms | 297 to 341 ms | 29.1 to 30.1 | 5.4 to 6.9 |
+| v2 | 1 CPU, 4,000 users | 6,594 to 6,599 | 1.6 ms | 2.5 to 4.7 ms | 32.4 to 33.7 | 10.3 to 10.4 |
+| v3 | 1 CPU, 4,000 users | 6,578 to 6,596 | 1.5 ms | 2.4 to 2.7 ms | 30.8 to 30.9 | 8.4 to 9.2 |
+| v4 | 1 CPU, 4,000 users | 6,581 to 6,588 | 1.5 ms | 2.4 to 2.5 ms | 30.6 to 30.7 | 8.4 to 8.5 |
+
+v3's worst round ran beside goose-http's test suite. Kept: v4, pushed to `ring-buffers`
+as fork commit `c64ce3f`, so #440 carries it. User time a request falls by a fifth;
+without foreign keys alone is level.
+
+goose-http branch `rearm` (`3f830d7`, not merged or released): a receive that ends
+with `ENOBUFS` parks its connection, oldest first, and the end of a pass re-arms only
+as many as its ring will have free buffers; `ur_wait` starts at the next ring each
+call. Its whole `scripts/test.sh` passed in WSL. In a test of 400 connections with 4
+buffers, `ENOBUFS` fell from 11 to 14 a request to 0.9, completions from 12 to 16 to
+2.9. In the entry (`v5`, `v4` built against it), two rounds each at 0.4 CPU and
+20,000 users, where `v4b` and `v5b` are the same with 64 buffers:
+
+| Build | req/s | p95 | p99 | max | µs a request |
+|---|---:|---:|---:|---:|---:|
+| v4b, 64 buffers | 10,864 to 10,990 | 1,313 to 1,357 ms | 1,371 to 1,749 ms | 1,524 to 1,951 ms | 34.2 to 34.7 |
+| v5b, 64 and the re-arm | 11,638 to 11,687 | 1,151 to 1,183 ms | 1,391 to 1,547 ms | 4,040 to 5,086 ms | 32.2 to 32.3 |
+| v4, 1,024 buffers | 12,696 to 12,752 | 1,052 to 1,108 ms | 1,306 to 1,353 ms | 1,408 to 1,464 ms | 29.5 to 29.7 |
+| v5, 1,024 and the re-arm | 12,613 to 12,616 | 1,091 to 1,107 ms | 1,268 to 1,525 ms | 1,367 to 1,744 ms | 29.8 |
+
+With 64 buffers the re-arm gives 7% more requests a second at 6% less CPU, but the
+slowest request waits 4 to 5 s: parked connections queue behind each other. With
+1,024 it is level (and +1% at 10,000 users, three rounds), so the entry keeps
+goose-http `v0.5.19`. Before `rearm` merges, the parked wait needs a bound.
+
+Group commit and one transaction a pass need a goose-http hook at the end of a pass,
+a public API, so they wait for a proposal (AGENTS.md, "Keep changes small").
+
 ### Next
 
 Wait for #440 to be merged and scored, and record its hold here. Expected: past
-120,000, since 12% more requests a second at the cliff is about 130,000. The board
-measured #417 at 41 µs a request against kensac's 25, a wider gap than here, so the
-ceiling from CPU a request is about 310,000 × 25 / 41, near 190,000. Whether the
-refusals at 160,000 follow the cliff or are a limit of their own isn't known. Queuing `ENOBUFS`
-receives again only once buffers come back belongs in goose-http, as its own task
-(see "Open").
+120,000, since 12% more requests a second at the cliff is about 130,000, and the range
+reads add about 6% more. The board measured #417 at 41 µs a request against kensac's
+25, a wider gap than here, so the ceiling from CPU a request is about
+310,000 × 25 / 41, near 190,000, before the range reads. Whether the refusals at
+160,000 follow the cliff or are a limit of their own isn't known. goose-http's
+`rearm` waits for a bound on the parked wait (above).
 
 ## Acceptance criteria
 
