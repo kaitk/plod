@@ -401,9 +401,10 @@ head `2192d45`, opened 2026-11-14; its CI job was running when this was written.
 ### Next
 
 Wait for #440 to be merged and scored, and record its hold here. Expected: past
-120,000, since 12% more requests a second at the cliff is about 130,000. The ceiling
-from CPU a request is about 230,000 to 260,000. The refusals at 160,000 are a separate
-limit that neither change addresses. Queuing `ENOBUFS`
+120,000, since 12% more requests a second at the cliff is about 130,000. The board
+measured #417 at 41 µs a request against kensac's 25, a wider gap than here, so the
+ceiling from CPU a request is about 310,000 × 25 / 41, near 190,000. Whether the
+refusals at 160,000 follow the cliff or are a limit of their own isn't known. Queuing `ENOBUFS`
 receives again only once buffers come back belongs in goose-http, as its own task
 (see "Open").
 
