@@ -1,0 +1,7 @@
+GET /health 200 ok
+POST /notes 201 {"id":1}
+POST /notes 201 {"id":2}
+POST /notes 422 {"error":"one_line"}
+GET /notes 200 first note
+second note
+GET /stats 200 {"notes":2,"commits":2}

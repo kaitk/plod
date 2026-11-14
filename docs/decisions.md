@@ -722,6 +722,29 @@ their answers, and a paused route gets no `CLOSED`. This rejected:
   no `CLOSED`, and the socket's wait replaces its timer.
 - A field in `Cx` or `Exchange`, which a bit of `mode` makes unneeded.
 
+Decided (2026-11-14): group commit is the application's, on one call,
+`plod::after_pass(cx, u, ms)`: `plod::own_waits(cx, u)`, `http::later(cx.out, ms)`,
+and `http::wake` of that address. goose-http queues a wake from the worker that owns
+the exchange and delivers the queue after the pass's other completions, so every route
+that called `after_pass` in a pass has run before the first `WAKE`. A write route
+begins a transaction if none is open, writes, and calls `after_pass`; at its `WAKE`
+it commits its generation's transaction if that's still open, and answers 201, or 500
+if the commit failed. Its `TIMEOUT` and `CLOSED` settle the transaction too, so a
+client that goes leaves none open. The open transaction's flag and generation live in
+the application, which also chooses where its reads see the uncommitted writes. Mail
+that comes mid-pass delivers the wakes asked so far early, which only splits a group.
+`examples/group-commit/` shows it, with a journal file as the store. The $12 Server
+Challenge's leading entries commit once a pass, and the rules allow it where each
+response waits for its commit. This rejected:
+
+- A hook in goose-http at the end of a pass, a new public API, which the queued wake
+  makes unneeded.
+- A commit lane, a thread per database: on one vCPU it adds a thread hop to every
+  write, and in WAL mode a commit on another connection empties the worker's page
+  cache.
+- A transaction or a pass counter in `Cx` or `Exchange`, which every program would
+  carry for one feature.
+
 Decided (2026-10-23): `plod::try_ask` is `plod::ask` that returns its refusal at
 admission, where `plod::ask` answers it with 503. It returns `http::SENT`, or why the
 job wasn't sent: `plod::NO_BUDGET` when the gather budget can't promise the reply, or

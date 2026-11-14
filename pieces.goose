@@ -125,6 +125,21 @@ fn own_waits<S, A, R>(cx: Cx<S, A, R>&, u) {
     x.mode |= OWNED;
 }
 
+// Calls the route again with http::WAKE, in u's case function, once the
+// worker has handled the rest of this pass's events: every route that called
+// after_pass in the pass has run before the first WAKE, so the first can
+// commit what they all wrote, as group commit does. Mail that comes mid-pass
+// delivers the wakes asked so far early, which splits a group. The route owns
+// its waits from here, as with plod::own_waits: it gets the TIMEOUT after ms
+// if the wake can't be queued, and the CLOSED of a client that goes, which
+// must settle what it wrote too. Needs Config.mail_slots and max_waiting, as
+// http::later does. serve_one gives the WAKE only from its wakes. 500
+// not_served outside serve and serve_one.
+fn after_pass<S, A, R>(cx: Cx<S, A, R>&, u, ms: i64 = 1000) {
+    own_waits(cx, u);
+    http::wake(http::later(cx.out, ms), 0);
+}
+
 // Sends data, the next piece of the response plod::begin began, or bytes as
 // they are on a connection plod::upgrade took.
 fn send(cx, data: const u8[:]) {

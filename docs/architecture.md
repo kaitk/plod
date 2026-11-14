@@ -255,7 +255,11 @@ tagged `http::NO_ROOM`, and Plod answers 503 with `Retry-After` before
 a mode bit for a pause before `plod::begin`. A route that begins its own waits with
 goose-http, as a database pool does on its sockets, calls `plod::own_waits` first,
 another mode bit: it then gets each wait's `WAKE`, `TIMEOUT`, and `CLOSED`, and Plod
-answers none of them. One case function per variant
+answers none of them. `plod::after_pass` is `own_waits` and a wake of the exchange
+itself, which goose-http delivers after the rest of the worker's pass: the first
+`WAKE` of a pass can commit every write the pass's routes made, and each answers once
+its commit is done ([decision](decisions.md#waiting-on-another-thread),
+[example](../examples/group-commit/main.goose)). One case function per variant
 handles every kind, because Goose can't keep a block to call at the next event.
 [Later calls](reference.md#4-later-calls) has each call and event.
 

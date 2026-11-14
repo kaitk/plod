@@ -148,6 +148,7 @@ The examples are complete programs to start from, each tested over HTTP:
 | [`plain/`](examples/plain/main.goose) | Routes, scopes, extractors, and middleware, without a schema |
 | [`schema/`](examples/schema/) | A generated router and types, with hand-written handlers |
 | [`compress/`](examples/compress/main.goose) | Compressed answers, whole and in pieces |
+| [`group-commit/`](examples/group-commit/main.goose) | Writes that commit together once a pass, each answered after its commit |
 | [`upgrade/`](examples/upgrade/main.goose) | A 101 and an echo of the client's bytes |
 | [`websocket/`](examples/websocket/main.goose) | A WebSocket echo |
 | [`device/`](examples/device/) | A board's API: sysfs readings, a firmware upload, a token, and CORS |
