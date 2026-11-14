@@ -1,8 +1,8 @@
 # 063: The $12 Server Challenge
 
 Status: in-progress (2026-11-14). #417 scored 115,000 users; the follow-up, #440,
-with 1,024 receive buffers, a checkpoint lane, and the feed as range reads, waits to
-be merged and scored; see "The follow-up" and "Range reads and the re-arm".
+with 1,024 receive buffers, a checkpoint lane, and the feed as range reads, was merged
+and scored 185,000; see "The follow-up", "Range reads and the re-arm", and "Next".
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -476,12 +476,14 @@ a public API, so they wait for a proposal (AGENTS.md, "Keep changes small").
 
 ### Next
 
-Wait for #440 to be merged and scored, and record its hold here. Expected: past
-120,000, since 12% more requests a second at the cliff is about 130,000, and the range
-reads add about 6% more. The board measured #417 at 41 µs a request against kensac's
-25, a wider gap than here, so the ceiling from CPU a request is about
-310,000 × 25 / 41, near 190,000, before the range reads. Whether the refusals at
-160,000 follow the cliff or are a limit of their own isn't known.
+#440 was merged and scored 2026-11-14 at `c64ce3f`, on the challenge's 1 vCPU, 2 GB
+box: 185,000 users held five minutes, rank 75 of the board then, against #417's
+115,000. 18,127 req/s (19,486 during the hold), p95 253.4 ms and p99 614.4 ms, no
+errors, 71% CPU, 36 µs a request, 898 MB peak, 42 of 42 checks. 195,000 passed its
+2-minute probe and failed the hold on p99 (1.13 s); 200,000 failed the probe on p99
+(1.66 s). The expectation above was about 140,000: the cliff at 120,000 is gone, and
+at 36 µs a request against kensac's 25, the same scaling as above gives about
+215,000. The entries above it hold 220,000 to 310,000 at 25 to 30 µs a request.
 
 goose-http's `rearm` is merged and released as goose-http `v0.5.20` (2026-11-14), and
 Plod's pin moved to it. Below capacity it is level against `v0.5.19` at the default 64
@@ -502,4 +504,4 @@ buffers, where the re-arm is level.
 - [x] The pull request is open upstream (#417, 2026-11-12)
 - [x] The board's 5-minute hold for #417, recorded here (115,000 users, 2026-11-13)
 - [x] The follow-up pull request is open upstream (#440, 2026-11-14)
-- [ ] The board's hold for the follow-up, recorded here
+- [x] The board's hold for the follow-up, recorded here (185,000 users, 2026-11-14)
