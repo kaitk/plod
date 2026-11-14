@@ -645,6 +645,31 @@ opened 2026-11-14 from the fork's branch `plod-group-commit` (`76a3909`): upstre
 it works" and "Measured" updated. It passes the 42 checks against upstream's tests. No
 pull request used the branch before it was pushed.
 
+### Next: PGO in #448
+
+Decided (2026-11-14): PGO for SQLite goes into #448, if #448 isn't merged yet and it
+doesn't hurt. "Range reads and the re-arm" measured it level on the 5800X3D, whose
+96 MB L3 can hide the instruction-cache and branch costs PGO saves; the board's box
+runs the entry at 36 µs a request against kensac's 25, a wider gap than the 30
+against 27.5 here, and mbobka, crystal, and delneg report −4.5%.
+
+1. The PGO build is uncommitted in WSL's `~/tw/tdp-pgo` (`~/tw-pgo/twelve-dollar-plod`
+   links to it), on `c64ce3f`: `train.goose`, `pgo-gcc`, and `build.sh`, with
+   `~/tw-pgo/build.sh` to build it. Move it onto the fork's `group-commit` (`c69beab`).
+   `train.goose` serves app.goose's routes through `plod::serve_one`: the writes now
+   wait with `plod::after_pass`, so each needs a `plod::Wake` in serve_one's wakes, or
+   it gets `CLOSED` and the trainer never runs the COMMIT.
+2. Check it doesn't hurt: three alternating rounds of `v7` (`46c49d1`) against the PGO
+   build, `bench.sh`'s setup of "Group commit and the hold" at `CPUS=1` and `0.65`.
+   Before shipping, `profile.sh`'s callgrind with `--branch-sim=yes --cache-sim=yes`
+   on both: instructions, I1 misses, and mispredicted branches a request, counts the
+   X3D's cache can't hide. Ship unless the rounds or the counts are worse.
+3. The 42 checks, a cold build's time (58 s before), and the README: the build in
+   "How it works", the numbers in "Measured".
+4. Before pushing to `plod-group-commit`, check through the GitHub API that #448 isn't
+   merged or closed and has no comments; if it is, stop and ask. Then push, add a line
+   to #448's description, and record it here.
+
 ## Acceptance criteria
 
 - [x] goose-sqlite's tests pass on Linux x86_64 (branch `query`, WSL2 Ubuntu 26.04,
