@@ -9,8 +9,8 @@ RUN apt-get update -qq && \
 
 # Goose's release, checked against its SHA-256. The release has no archive
 # for Linux on arm64, so there its tag is built from source.
-ARG GOOSE_RELEASE=v2026.3
-ARG GOOSE_SHA256=06ac30284338269d3996d457412bf4f2b47c1f9a5601de65b6317187fe78d5c9
+ARG GOOSE_RELEASE=v2026.4
+ARG GOOSE_SHA256=559ad7572df89fcd1273512d8679528bcdf876c252ec1f31608d3808b24125b3
 RUN set -eu; \
     case "$(uname -m)" in \
     x86_64) \
