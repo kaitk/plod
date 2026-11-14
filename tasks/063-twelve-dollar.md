@@ -474,7 +474,7 @@ a cold build took 58 s against 23. Three alternating rounds against `v4`: 30.5 t
 Group commit and one transaction a pass need a goose-http hook at the end of a pass,
 a public API, so they wait for a proposal (AGENTS.md, "Keep changes small").
 
-### Next
+### Scored #440, 2026-11-14
 
 #440 was merged and scored 2026-11-14 at `c64ce3f`, on the challenge's 1 vCPU, 2 GB
 box: 185,000 users held five minutes, rank 75 of the board then, against #417's
@@ -493,6 +493,89 @@ all stayed within their runs' spread (goose-http's `docs/results.md`, "2026-11-1
 re-arm against v0.5.19, below capacity"). The entry stays on `v0.5.19` with 1,024
 buffers, where the re-arm is level.
 
+### The p99 limit at 185,000, 2026-11-14
+
+Every entry between 185,000 and 310,000 fails the same way, p99 into seconds with no
+errors, at 72% to 88% app CPU. Ours reaches it at about 74% (195,000 users is about
+20,500 req/s at 36 µs). Two causes, by evidence:
+
+1. CPU a request, 36 µs against 25 to 28. The passing entries above fail at 77% to
+   87%, so the cliff scales as users ≈ 0.75 to 0.8 / (µs × 0.105 req/s a user): about
+   200,000 at 36 µs, 255,000 to 285,000 at 25 to 28.
+2. A worse tail at the same load, from writes. Each write commits alone, and the worker
+   checkpoints the WAL itself at `wal_autocheckpoint`'s 16,000 frames, with three
+   fsyncs (30 to 70 ms) on the loop, every 2 to 3 s at the box's write rate. The
+   checkpoint lane's PASSIVE checkpoints rarely complete, as writes keep arriving
+   during its fsyncs. Writes alone commit about 5 WAL frames each.
+
+Measured with `bench.sh`'s setup above, 10,000 users with think times divided by 20
+(about 16,000 req/s, 1,200 writes a second, near the box's 1,530 at 185,000), 60 s
+after a 15 s ramp, `c64ce3f` against kensac:
+
+| Build | CPU | req/s | p95 | p99 | µs a request |
+|---|---|---:|---:|---:|---:|
+| `c64ce3f` | 1 | 16,366 | 7 ms | 36.3 ms | 31.1 |
+| kensac | 1 | 16,432 | 3.7 ms | 7.0 ms | 27.6 |
+| `c64ce3f`, three runs | 0.65 | 15,600 to 16,300 | 19 to 20 ms | 48.5 to 52.9 ms | 31.0 to 31.2 |
+| kensac, two runs | 0.65 | 16,400 | 3.4 to 4.3 ms | 5.8 to 13.4 ms | 27.1 to 27.6 |
+| `c64ce3f`, worker `wal_autocheckpoint=0`, two runs | 0.65 | 15,500 | 24 to 27 ms | 32.6 to 35.1 ms | 32.0 |
+
+Without writes p99 was 2 ms ("Measured on x86-64"), so the excess is the writes'. The
+worker without its own checkpoint loses a third of it, but its WAL grew to 1.5 GB in
+60 s. strace (which raised the cost to 49 µs a request, so structure only) put the
+worker's three fsyncs in most of its longest passes, 120 to 276 ms. Ruled out: memory
+(the entries above pass at 1.1 to 1.5 GB), accept and backlog (no errors or refusals),
+and the checkpoint lane's CPU.
+
+What every entry above does and this one doesn't, from their source at upstream
+`1844a07`: group commit, one transaction a pass answered after its commit (kensac
+per pass of 256 completions or 1 ms; mbobka #316 per pass, then the sends; delneg,
+pavlyhalim, ahmadsh2007, davidhsv the same, some with a 2 to 5 ms window for POSTs),
+and a checkpoint hold: a thread at nice 19 runs PASSIVE checkpoints from 1,000 to
+16,000 frames, and past a mark the loop parks writes, at most 50 to 250 ms, while
+reads go on, until a checkpoint completes; the loop checkpoints itself only at 32,000
+to 65,000 frames (kensac `shim.c`, mbobka `Db.cs`, delneg `Server.fs`). The maintainer
+noted long windows hurt: #381 with 30 ms fell to 219,000, #387 with 5 ms held 260,000.
+
+The framework entries above are frameworks in name: the Kestrel entries (#316, #317,
+#201) hand every socket to their own io_uring loop through a listener whose accept
+never completes. The one framework mechanism is Rayo's (crystal-rayo-faustinoaq #218,
+200,000): a handler joins a transaction, and the loop's flusher commits at the top of
+each turn and then sends the deferred answers.
+
+goose-http needs no new API for either: a wake a worker sends to its own exchange is
+queued, and the loop delivers those after the pass's other completions
+(`http.goose`'s `wake`, `uring.goose`'s `wake_all` after the completions;
+`docs/api.md`, "Worker addresses"). A mail completion mid-pass flushes them early,
+which only splits a group. `plod::own_waits` gives a route those waits; the HttpArena
+app's database pool uses it.
+
+### Next
+
+In a new session (2026-11-14):
+
+1. Group commit as an opt-in Plod feature: an optional `plod::after_pass(cx, u)` (own
+   waits, `http::later`, and a wake to itself), with a test, a best-practices page,
+   and the decision in `docs/decisions.md` and `docs/architecture.md` (the open
+   criterion below). Nothing in `Cx` or on a shared path: the open transaction's flag
+   and generation live in the application. The write route BEGINs if no transaction
+   is open, inserts, and waits for its wake; the first wake of the pass COMMITs, and
+   each answers 201, or 500 if its generation's COMMIT failed. Reads in the pass see
+   the write before its COMMIT, as in kensac's one transaction a pass.
+2. The checkpoint hold in the entry, from the same pieces: the worker's
+   `wal_autocheckpoint` at an emergency 65,536 frames; past a mark (counted by writes,
+   as `wrote()` does; goose-sqlite has no WAL hook), the write route parks at most
+   250 ms and the first parked write asks the lane for a PASSIVE checkpoint, which
+   completes with no writes arriving; then it wakes the parked writes.
+3. goose-http `v0.5.20` for the entry, at no cost.
+4. Measure against `c64ce3f` as above, and show the numbers before any pull request.
+   Expected: group commit alone 3% to 5% (fewer WAL frames a write, so fewer
+   checkpoints), about 190,000 to 195,000; with the hold, about 200,000 to 210,000.
+   250,000 needs about 29 µs a request, most of the gap SQLite's own time on SQL, which
+   B-tree reads would close and the goal excludes.
+5. Then the follow-up pull request and its README: before pushing to it, check that
+   it isn't merged already and has no comments.
+
 ## Acceptance criteria
 
 - [x] goose-sqlite's tests pass on Linux x86_64 (branch `query`, WSL2 Ubuntu 26.04,
@@ -505,3 +588,5 @@ buffers, where the re-arm is level.
 - [x] The board's 5-minute hold for #417, recorded here (115,000 users, 2026-11-13)
 - [x] The follow-up pull request is open upstream (#440, 2026-11-14)
 - [x] The board's hold for the follow-up, recorded here (185,000 users, 2026-11-14)
+- [ ] Group commit and the checkpoint hold measured against `c64ce3f`, recorded here
+- [ ] The second follow-up pull request is open upstream, and its hold recorded here
