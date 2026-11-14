@@ -481,9 +481,15 @@ Wait for #440 to be merged and scored, and record its hold here. Expected: past
 reads add about 6% more. The board measured #417 at 41 µs a request against kensac's
 25, a wider gap than here, so the ceiling from CPU a request is about
 310,000 × 25 / 41, near 190,000, before the range reads. Whether the refusals at
-160,000 follow the cliff or are a limit of their own isn't known. goose-http's
-`rearm` (`bc41591`) is ready to merge for goose-http's default of 64 buffers; the
-entry doesn't need it.
+160,000 follow the cliff or are a limit of their own isn't known.
+
+goose-http's `rearm` is merged and released as goose-http `v0.5.20` (2026-11-14), and
+Plod's pin moved to it. Below capacity it is level against `v0.5.19` at the default 64
+buffers: goose-http's `bench/run.sh` cells, this repository's HttpArena profiles, 36
+runs each of `async`'s 32,000 connections, and IOCP under goose-http's `bench/oha.sh`
+all stayed within their runs' spread (goose-http's `docs/results.md`, "2026-11-14: the
+re-arm against v0.5.19, below capacity"). The entry stays on `v0.5.19` with 1,024
+buffers, where the re-arm is level.
 
 ## Acceptance criteria
 
