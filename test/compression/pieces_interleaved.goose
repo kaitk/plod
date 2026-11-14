@@ -4,7 +4,7 @@
 // its own pieces coded alone, as the exchanges' addresses, which goose-http
 // keeps apart, pick their encoders; and every encoder is back after.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.19";
+import http from "github.com/kaitk/goose-http@v0.5.20";
 import compress from "github.com/kaitk/goose-compress@v0.1.4";
 import plod from "../../";
 import plod.compression;

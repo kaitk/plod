@@ -5,7 +5,7 @@
 // paths; and a cached file replaced. Writes test_files/ in the working
 // directory.
 import std;
-import http from "github.com/kaitk/goose-http@v0.5.19";
+import http from "github.com/kaitk/goose-http@v0.5.20";
 import plod from "../../";
 import expect from "../";
 import common;
