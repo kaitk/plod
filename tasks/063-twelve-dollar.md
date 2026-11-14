@@ -3,8 +3,9 @@
 Status: in-progress (2026-11-14). #417 scored 115,000 users; the follow-up, #440,
 with 1,024 receive buffers, a checkpoint lane, and the feed as range reads, was merged
 and scored 185,000; see "The follow-up", "Range reads and the re-arm", and "Next".
-Group commit and the checkpoint hold are the second follow-up, #448, open and waiting
-for its score ("Group commit and the hold").
+Group commit, the checkpoint hold, and SQLite built from a profile are the second
+follow-up, #448, open and waiting for its score ("Group commit and the hold", "PGO in
+#448").
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -669,6 +670,50 @@ against 27.5 here, and mbobka, crystal, and delneg report −4.5%.
 4. Before pushing to `plod-group-commit`, check through the GitHub API that #448 isn't
    merged or closed and has no comments; if it is, stop and ask. Then push, add a line
    to #448's description, and record it here.
+
+### PGO in #448, 2026-11-14
+
+The PGO build is the fork's `group-commit` at `781be9a`, on `c69beab`, and
+`plod-group-commit` at `0e81deb`, #448's head. The trainer is on goose-http `v0.5.20`
+and Plod `v0.5.13`, with `server.goose`'s settings: `wal_autocheckpoint` 65,536 and a
+lane of 4 slots. `serve_one` gets two `plod::Wake`s a request: a write's `WAKE`, which
+COMMITs, and before it, for the write that begins a hold, the lane's reply. About
+6,800 writes in 40,000 loops pass the 4,096 mark, so the trainer runs the hold and its
+PASSIVE checkpoint too.
+
+Three alternating rounds of `v7` (`46c49d1`) and `p7` (`781be9a`), the setup of
+"Group commit and the hold". No errors in any run.
+
+| Build | CPU | req/s | p95 | p99 | max | µs a request | user |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `v7` | 1 | 16,374 to 16,422 | 4.9 to 5.1 ms | 8.2 to 11.4 ms | 128 to 268 ms | 30.5 to 30.6 | 6.7 |
+| `p7`, PGO | 1 | 16,397 to 16,411 | 5.0 ms | 9.3 to 9.9 ms | 100 to 240 ms | 30.5 to 30.6 | 6.5 to 6.8 |
+| `v7` | 0.65 | 16,382 to 16,419 | 5.3 to 6.1 ms | 12.1 to 52.7 ms | 74 to 170 ms | 30.4 to 30.7 | 6.6 to 7.1 |
+| `p7`, PGO | 0.65 | 16,371 to 16,406 | 5.1 to 6.0 ms | 8.9 to 48.4 ms | 78 to 165 ms | 30.3 to 30.7 | 6.6 to 7.0 |
+
+`profile.sh`'s load under callgrind with `--branch-sim=yes --cache-sim=yes`, two runs
+of each build, counts a request:
+
+| Build | requests | instructions | I1 misses | conditional mispredicts | indirect mispredicts |
+|---|---:|---:|---:|---:|---:|
+| `v7` | 36,077 and 35,994 | 84,388 and 87,063 | 849 and 845 | 575 and 568 | 451 and 486 |
+| `p7`, PGO | 36,028 and 36,081 | 84,907 and 83,973 | 836 and 836 | 549 and 544 | 480 and 469 |
+
+- **The rounds** are level: CPU a request, p95, and p99 overlap at both limits. Each
+  build has one p99 near 50 ms at 0.65.
+- **The counts**: about 1.2% fewer I1 misses and 4.4% fewer conditional mispredicts
+  in both runs; instructions vary 3% between runs of one build, and indirect
+  mispredicts overlap. Per function, `sqlite3VdbeExec` runs 4% more instructions with
+  PGO, and `columnMem` is inlined into the `sqlite3_column_*` functions. Mispredicts
+  also move in code PGO doesn't touch (`feed_g`, `http_answer`), so callgrind's branch
+  table aliases, and a few percent there isn't a measurement.
+- Neither is worse, so PGO ships. A cold build, with an empty package cache, takes
+  65 s (58 s on `c64ce3f`), and `0e81deb` passes the 42 checks against upstream's
+  tests. The README has the build in "How it works" and the rounds and counts in
+  "Measured".
+
+#448 was open, not merged, with no comments or reviews, and its head still `76a3909`,
+before the push; its description has a line for PGO.
 
 ## Acceptance criteria
 
