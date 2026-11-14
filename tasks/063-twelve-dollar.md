@@ -3,6 +3,8 @@
 Status: in-progress (2026-11-14). #417 scored 115,000 users; the follow-up, #440,
 with 1,024 receive buffers, a checkpoint lane, and the feed as range reads, was merged
 and scored 185,000; see "The follow-up", "Range reads and the re-arm", and "Next".
+Group commit and the checkpoint hold are built and measured, and wait for a go before
+the second follow-up pull request ("Group commit and the hold").
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -576,17 +578,79 @@ In a new session (2026-11-14):
 5. Then the follow-up pull request and its README: before pushing to it, check that
    it isn't merged already and has no comments.
 
+### Group commit and the hold, 2026-11-14
+
+Plod `v0.5.13` has `plod::after_pass(cx, u, ms)`: `own_waits`, `http::later`, and
+`http::wake` of the exchange itself, with a test, the decision, and
+`examples/group-commit/` in place of a best-practices page. In that example, 64
+parallel writes on Windows went out in 12 to 13 commits.
+
+The entry, local commits on the fork's branch `group-commit` from `c64ce3f`, each
+passing the 42 checks:
+
+- `edefec6`: group commit. A write begins a transaction if none is open, writes, keeps
+  its answer in a 256 KB buffer in `App`, and calls `after_pass`; the first `WAKE`
+  commits, and each answers, or 500 if its generation's COMMIT failed. A like that
+  changes nothing ends a transaction it began itself and answers at once. Each event
+  settles, so a client that goes leaves no transaction open. goose-http `v0.5.20`, and
+  `Config.mail_slots: 64`, `max_waiting: 65536`.
+- `99b9adb`, `a51d903`: the hold. Past 4,096 writes since the WAL last started over,
+  the write commits the open transaction, parks, and asks the lane for a PASSIVE
+  checkpoint with its own address for the reply (`http::lane_send_value`); later writes
+  park behind it, at most 250 ms, keeping their user and post id in `St` and a post's
+  text and author in a 64 KB buffer in `App`. The lane's reply, or a `TIMEOUT`, wakes
+  them, and they write then. The worker's `wal_autocheckpoint` is 65,536; the lane's
+  box has 4 slots. The first version parked the COMMIT, not the writes, and the WAL
+  never started over: it grew to 257 MB, the 65,536-page bound, in 30 s. SQLite
+  restarts the WAL only for a writer whose transaction began once the WAL had been
+  copied back whole, and a held transaction began before. Parking before the write,
+  the WAL's file stays at 49 MB (62 MB for `edefec6`, whose worker checkpoints at
+  16,000 pages).
+- `46c49d1`: Plod `v0.5.13` by its tag, built with an empty package cache.
+
+`bench.sh`'s setup of "The p99 limit at 185,000", 10,000 users, think times divided by
+20, 60 s after a 15 s ramp, three alternating rounds (`ab.sh 3 c64 v6 v7`), nothing else
+in Docker. `c64` is `c64ce3f` rebuilt (byte for byte `v4`), `v6` is `edefec6`, and `v7`
+is `46c49d1`. No errors in any run.
+
+| Build | CPU | req/s | p95 | p99 | max | µs a request | user |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `c64`, `c64ce3f` | 1 | 16,359 to 16,375 | 6.5 to 7.2 ms | 39.6 to 43.1 ms | 110 to 201 ms | 30.8 to 31.3 | 6.9 to 7.3 |
+| `v6`, group commit | 1 | 16,374 to 16,413 | 5.2 to 6.5 ms | 27.0 to 43.8 ms | 115 to 244 ms | 30.3 to 31.1 | 6.6 to 7.1 |
+| `v7`, and the hold | 1 | 16,394 to 16,420 | 4.6 to 4.9 ms | 7.5 to 8.3 ms | 81 to 196 ms | 30.2 to 30.8 | 6.7 to 6.8 |
+| `c64`, `c64ce3f` | 0.65 | 16,340 to 16,351 | 11.1 to 17.2 ms | 37.0 to 49.4 ms | 82 to 130 ms | 30.6 to 30.9 | 6.6 to 6.9 |
+| `v6`, group commit | 0.65 | 16,367 to 16,417 | 6.5 to 8.1 ms | 29.0 to 37.0 ms | 68 to 141 ms | 30.1 to 30.7 | 6.6 to 6.9 |
+| `v7`, and the hold | 0.65 | 16,393 to 16,418 | 5.1 to 5.2 ms | 8.9 to 17.4 ms | 73 to 163 ms | 30.0 to 30.3 | 6.8 to 7.0 |
+
+kensac at the same loads: p95 3.7 ms and p99 7.0 ms at 1 CPU, p95 3.4 to 4.3 ms and p99
+5.8 to 13.4 ms at 0.65, 27.1 to 27.6 µs a request ("The p99 limit at 185,000").
+
+- **Group commit alone** is level within the rounds' spread: about 1% less CPU a
+  request at best, against the 3% to 5% expected; p95 is lower in every round, and p99
+  overlaps. At about 1,200 writes a second and a 1 ms pass, a pass holds about one
+  write, as "Measured on x86-64" found at 4,000 users.
+- **The hold** takes p99 from 37 to 49 ms to 7.5 to 17.4 ms, kensac's range, and p95
+  from 6.5 to 17.2 ms to 4.6 to 5.2 ms, in every round at both CPUs, with no overlap.
+  The tail was the worker's own checkpoints, as "The p99 limit at 185,000" found. CPU
+  a request is 1% to 2% below `c64`'s, at the edge of the spread.
+
+Expected on the board: the second cause of the p99 limit is gone, the first, CPU a
+request, is about the same. The CPU model above (users ≈ 0.75 to 0.8 / (µs × 0.105))
+at #440's 36 µs, 1% to 2% lower, gives about 200,000 to 215,000.
+
 ## Acceptance criteria
 
 - [x] goose-sqlite's tests pass on Linux x86_64 (branch `query`, WSL2 Ubuntu 26.04,
       2026-11-12)
 - [x] The query layer is in a goose-sqlite release (`v0.0.4`, 2026-11-12)
-- [ ] The group-commit decision is in `docs/decisions.md` and `docs/architecture.md`
+- [x] The group-commit decision is in `docs/decisions.md` and `docs/architecture.md`
+      (Plod `v0.5.13`, 2026-11-14)
 - [x] The entry passes the challenge's `test/run.sh`, 42 checks (macOS arm64, and
       Linux arm64 in Docker, 2026-11-12)
 - [x] The pull request is open upstream (#417, 2026-11-12)
 - [x] The board's 5-minute hold for #417, recorded here (115,000 users, 2026-11-13)
 - [x] The follow-up pull request is open upstream (#440, 2026-11-14)
 - [x] The board's hold for the follow-up, recorded here (185,000 users, 2026-11-14)
-- [ ] Group commit and the checkpoint hold measured against `c64ce3f`, recorded here
+- [x] Group commit and the checkpoint hold measured against `c64ce3f`, recorded here
+      (2026-11-14)
 - [ ] The second follow-up pull request is open upstream, and its hold recorded here
