@@ -51,6 +51,9 @@ traps apply too.
 - curl's `telnet://` reads stdin as text and sends each CRLF as a bare LF, which the
   server refuses with 400. Pass the bytes as an upload, `-T -`, which sends them as
   they are.
+- Git Bash's `sed` drops the CR before each LF as it reads, so `/^\r$/` never matches
+  and a range such as `sed '1,/^\r$/d'` deletes to the end. Strip the CRs first,
+  `tr -d '\r' | sed '1,/^$/d'` (2026-11-14).
 - `sleep_ms` rounds up to Windows' timer tick, about 15.6 ms, and starting curl takes
   longer than on Linux. A request script that times a server's work against several
   curl runs needs a wider margin than on Linux.
