@@ -3,8 +3,8 @@
 Status: in-progress (2026-11-14). #417 scored 115,000 users; the follow-up, #440,
 with 1,024 receive buffers, a checkpoint lane, and the feed as range reads, was merged
 and scored 185,000; see "The follow-up", "Range reads and the re-arm", and "Next".
-Group commit and the checkpoint hold are built and measured, and wait for a go before
-the second follow-up pull request ("Group commit and the hold").
+Group commit and the checkpoint hold are the second follow-up, #448, open and waiting
+for its score ("Group commit and the hold").
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -638,6 +638,13 @@ Expected on the board: the second cause of the p99 limit is gone, the first, CPU
 request, is about the same. The CPU model above (users ≈ 0.75 to 0.8 / (µs × 0.105))
 at #440's 36 µs, 1% to 2% lower, gives about 200,000 to 215,000.
 
+The second follow-up is
+[#448](https://github.com/arjaythedev/twelve-dollar-server-challenge/pull/448),
+opened 2026-11-14 from the fork's branch `plod-group-commit` (`76a3909`): upstream's
+`main` with the entry's folder as `group-commit` (`c69beab`) has it, the README's "How
+it works" and "Measured" updated. It passes the 42 checks against upstream's tests. No
+pull request used the branch before it was pushed.
+
 ## Acceptance criteria
 
 - [x] goose-sqlite's tests pass on Linux x86_64 (branch `query`, WSL2 Ubuntu 26.04,
@@ -653,4 +660,5 @@ at #440's 36 µs, 1% to 2% lower, gives about 200,000 to 215,000.
 - [x] The board's hold for the follow-up, recorded here (185,000 users, 2026-11-14)
 - [x] Group commit and the checkpoint hold measured against `c64ce3f`, recorded here
       (2026-11-14)
-- [ ] The second follow-up pull request is open upstream, and its hold recorded here
+- [ ] The second follow-up pull request is open upstream (#448, 2026-11-14), and its
+      hold recorded here
