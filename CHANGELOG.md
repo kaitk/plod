@@ -3,6 +3,24 @@
 What each tag adds. Each release names the Goose compiler it was built and tested with.
 Plod was named goose-rest up to `v0.3.4`; the entries before `v0.4.0` keep that name.
 
+## v0.5.13 (2026-11-14)
+
+goose-http `v0.5.20` and Goose `v2026.4`. goose-compress `v0.1.4`; `plod.websocket`
+and `plod.jwt` declare goose-hash `v0.0.4`, and `plod.tls` and `plod.h3` goose-tls
+`v0.0.6`. No breaking changes.
+
+Added:
+
+- `plod::after_pass(cx, u, ms)` calls the route again with `WAKE` once the worker has
+  handled the rest of its pass of events, so that the pass's first `WAKE` can commit
+  every write its routes made, each answered after the commit. `examples/group-commit/`
+  shows it.
+
+Changed:
+
+- goose-http `v0.5.20`, from `v0.5.19`: a receive that finds no free buffer waits for
+  one, rather than being queued again pass after pass.
+
 ## v0.5.12 (2026-11-12)
 
 goose-http `v0.5.19` and Goose `v2026.4`. goose-compress `v0.1.4`; `plod.websocket`
