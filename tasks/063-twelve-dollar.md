@@ -453,6 +453,17 @@ slowest request waits 4 to 5 s: parked connections queue behind each other. With
 1,024 it is level (and +1% at 10,000 users, three rounds), so the entry keeps
 goose-http `v0.5.19`. Before `rearm` merges, the parked wait needs a bound.
 
+**PGO for SQLite**, not kept. `build.sh` built a trainer with only `sqlite3.c`
+instrumented (a `gcc` wrapper passed to `--cc`, in two folders, since Goose caches a
+package's objects by compiler path), ran it, and rebuilt with `-fprofile-use
+-fprofile-partial-training` on `sqlite3.c`. The trainer makes its own database in the
+challenge's schema (5,000 users, 50,000 posts, 400,000 likes), as the rules don't
+promise the seed at build time, and serves app.goose's routes in-process through
+`plod::serve_one` for 40,000 user loops in load.js's mix. It passed the 42 checks, and
+a cold build took 58 s against 23. Three alternating rounds against `v4`: 30.5 to 30.7
+µs a request against 30.5 to 30.8 at 1 CPU, and 28.9 to 29.5 against 28.9 to 29.5 at
+0.4 CPU, the rounds trading places. The −4.5% other entries report doesn't repeat here.
+
 Group commit and one transaction a pass need a goose-http hook at the end of a pass,
 a public API, so they wait for a proposal (AGENTS.md, "Keep changes small").
 
