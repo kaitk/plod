@@ -449,9 +449,16 @@ buffers, `ENOBUFS` fell from 11 to 14 a request to 0.9, completions from 12 to 1
 | v5, 1,024 and the re-arm | 12,613 to 12,616 | 1,091 to 1,107 ms | 1,268 to 1,525 ms | 1,367 to 1,744 ms | 29.8 |
 
 With 64 buffers the re-arm gives 7% more requests a second at 6% less CPU, but the
-slowest request waits 4 to 5 s: parked connections queue behind each other. With
-1,024 it is level (and +1% at 10,000 users, three rounds), so the entry keeps
-goose-http `v0.5.19`. Before `rearm` merges, the parked wait needs a bound.
+slowest request waited 4 to 5 s. The cause was the ramp: each new connection's first
+receive was queued before the pass's re-arms, unbudgeted, took the buffers they had
+counted on, and about 1,000 re-armed receives a second failed again and went to the
+back of the queue. `bc41591` counts every receive queued since the last wait against
+the free buffers, so a re-armed receive always gets one. Two runs at 64 buffers: 11,669
+to 11,728 req/s, max 1.40 s, 32.1 to 32.2 µs a request, against 10,864 to 10,990, 1.5
+to 2.4 s, and 34.2 to 34.7 without the re-arm. With 1,024 buffers it is level (6,580 to
+6,599 req/s and 30.9 to 31.0 µs against 6,579 to 6,594 and 30.7 to 30.9 at the default
+load), so the entry keeps goose-http `v0.5.19`. `rearm` passed goose-http's whole
+`scripts/test.sh` in WSL, and is not merged or released.
 
 **PGO for SQLite**, not kept. `build.sh` built a trainer with only `sqlite3.c`
 instrumented (a `gcc` wrapper passed to `--cc`, in two folders, since Goose caches a
@@ -475,7 +482,8 @@ reads add about 6% more. The board measured #417 at 41 µs a request against ken
 25, a wider gap than here, so the ceiling from CPU a request is about
 310,000 × 25 / 41, near 190,000, before the range reads. Whether the refusals at
 160,000 follow the cliff or are a limit of their own isn't known. goose-http's
-`rearm` waits for a bound on the parked wait (above).
+`rearm` (`bc41591`) is ready to merge for goose-http's default of 64 buffers; the
+entry doesn't need it.
 
 ## Acceptance criteria
 
