@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 S=$(cd "$(dirname "$0")" && pwd); G=${G:?set G to the folder that holds the twelve-dollar-plod and goose-sqlite checkouts}
 # bench.sh plod|kensac VUS SCALE [DURATION]: one k6 run against a 1-CPU, 2 GB server
-# container (NOFILE its descriptor limit); prints k6's summary lines, CPU µs per request, and memory peak.
+# container (NOFILE its descriptor limit, CPUS its CPUs); prints k6's summary lines, CPU µs per request, and memory peak.
 set -euo pipefail
 S=$(cd "$(dirname "$0")" && pwd)
 which=$1 vus=$2 scale=$3 dur=${4:-60s}
 docker rm -f srv >/dev/null 2>&1 || true
-common=(--name srv --network twelve-net --cpus=1 --memory=2g --memory-swap=2g --ulimit nofile=${NOFILE:-65535}:${NOFILE:-65535}
+common=(--name srv --network twelve-net --cpus=${CPUS:-1} --memory=2g --memory-swap=2g --ulimit nofile=${NOFILE:-65535}:${NOFILE:-65535}
         --security-opt seccomp=unconfined -e JWT_SECRET=twelve-dollar-challenge -e HOST=0.0.0.0 -e PORT=3000
         -e SQLITE_PATH=/tmp/db/feed.db -v $G/twelve-dollar-plod/seed:/seed:ro)
 case $which in

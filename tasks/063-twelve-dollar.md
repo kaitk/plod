@@ -1,7 +1,7 @@
 # 063: The $12 Server Challenge
 
-Status: in-progress (2026-11-12). Submitted as #417, waiting for the board's score; see
-"State".
+Status: in-progress (2026-11-14). #417 scored 115,000 users; a follow-up with 1,024
+receive buffers waits to be opened; see "State".
 
 The [$12 Server Challenge](https://github.com/arjaythedev/twelve-dollar-server-challenge)
 scores a five-endpoint feed API on SQLite on a 1 vCPU, 2 GB box: the most users that hold
@@ -262,7 +262,12 @@ fix, 0 of 600 (goose-http's decisions, "Direct descriptors").
   end of a pass.
 - **p99 with writes**: 52 to 118 ms against kensac's 2 ms, and 2 ms without writes,
   likely the WAL checkpoint (`wal_autocheckpoint = 16000`) running on the one worker.
-  Within the challenge's 1 s.
+  Within the challenge's 1 s. A checkpoint lane halves it only on a slow disk (see
+  "The follow-up").
+- **goose-http's receive buffers** (2026-11-14): 64 a ring is a CPU cliff past
+  capacity. Raising the default costs every worker: HttpArena runs one a core, and
+  1,024 would be 4 MB each. The better fix may be to queue the `ENOBUFS` receives
+  again only once buffers come back, in goose-http, as its own task.
 
 Released 2026-11-12: goose-http `v0.5.19` (both branches), goose-sqlite `v0.0.4`
 (`query`), and Plod `v0.5.12` (goose-http `v0.5.19`, Goose `v2026.4`). The entry
@@ -277,10 +282,77 @@ which SPEC.md requires and the review flags in over 30 entries. `8cfed51` refuse
 with 401. With 50,000 idle connections the server's RSS was 20 MB, about 0.3 KB a
 connection.
 
+### Scored, 2026-11-13
+
+#417 was merged and scored 115,000 users, tied 99th of 220. The maintainer's notes: CPU
+was only 50% during the hold; 120,000 failed at 97% CPU with timeouts and resets, and
+160,000 got mostly "connection refused". So the entry failed at a CPU cliff, not at the
+CPU per request measured above.
+
+The cause: goose-http gives each ring `Config.ring_buffers` receive buffers, 64 by
+default. When more connections than that have data in one pass, the rest get
+`ENOBUFS`, their multishot receive ends, and each is queued again, pass after pass.
+Below capacity a pass sees a few ready connections and the 64 never run out; past it,
+connections queue, and the re-queuing takes CPU the requests needed.
+
+### The follow-up, 2026-11-14
+
+Fork branch `ring-buffers`, commit `b99d2ed`: `ring_buffers: 1024` in the entry's
+`Config`, 4 MB, and the README's "How it works" and "Measured". It passes the 42
+checks. goose-http's default stays 64 (see "Open").
+
+Measured in Docker on the M1 Pro as before (Linux arm64, k6 1.3.0 in its own
+container), 20,000 users with the think times divided by 5 or 10, 60 s after a 15 s
+ramp, builds alternating, from a scratch copy of `bench.sh` that adds a pause, a ramp,
+and a command wrapper. With the server held to 0.4 CPU so that k6 saturates it
+(`CPUS=0.4`, think times divided by 10), two runs each:
+
+| Build | req/s | p95 | p99 | max | µs a request |
+|---|---:|---:|---:|---:|---:|
+| v0, `8cfed51`, 64 buffers | 13,084 to 13,110 | 459 to 634 ms | 693 to 1,075 ms | 1,439 to 1,762 ms | 24.9 to 25.3 |
+| `b99d2ed`, 1,024 buffers | 14,805 to 15,021 | 200 to 261 ms | 329 to 393 ms | 796 to 848 ms | 21.7 to 22.2 |
+
+Below saturation the two are level. At 1 CPU and 8,000 requests a second, three runs
+each: p99 11 to 33 ms against 10 to 26 ms, 21.5 to 21.7 µs a request against 21.3 to
+23.3. Freezing the server 300 ms every 5 s (`docker pause`), two runs each: p99 319 to
+328 ms against 314 to 325. A freeze leaves about 2,400 connections ready at once, so
+re-queuing alone is cheap; it costs where a saturated worker never catches up. An
+earlier single run (2026-11-13) that showed p99 65 → 12 ms below saturation didn't
+repeat.
+
+What was tried and left out:
+
+- **More listeners**: three more on the port (`cfg.listeners`, SO_REUSEPORT), for four
+  accept queues. With 300 ms freezes, p99 317 to 319 ms against 314 to 347 without, two
+  runs each; with all 20,000 users arriving in 2 s, one pair, too few to tell. Not kept.
+- **A checkpoint lane**: a goose-http lane thread with its own connection that
+  checkpoints the WAL, asked every 1,024 writes, both connections on `unix-excl` (as a
+  URI with `SQLITE_OPEN_URI`) so that they share the WAL index in memory. First as
+  PASSIVE then RESTART, so that the WAL starts over. With fsyncs slowed to 20 ms
+  (strace's `inject=fsync,fdatasync:delay_exit=20000`), RESTART made it worse: it holds
+  the write lock through two fsyncs, the worker waits in the busy handler, which
+  sleeps the whole event loop, and p95 rose from 3 ms to 36 to 52 ms, max to 879 ms.
+  PASSIVE alone never resets the WAL, since writes keep arriving while it runs (270 MB
+  at the worker's bound of 65,536 pages). PASSIVE with the worker's own checkpoint at
+  16,000 pages, which copies only the rest: with slow fsyncs, p99 38 to 44 ms against
+  77 to 79 without the lane, max 122 to 128 against 247 to 258, two runs each; with
+  normal fsyncs and at saturation, level (p99 202 to 355 against 235 to 274 ms at 0.4
+  CPU). A gain only on a slow disk, well inside the limits, for about 60 lines. Not
+  kept; the fork's branch `checkpoint-lane` (`5f54422`, on `b99d2ed`) holds it for the
+  x86-64 runs. The builds with RESTART exited with status 1 three times in about 20
+  runs, cause not found; the PASSIVE build and the buffers build ran 16 times without
+  one.
+- **Writes on a lane**, rejected before measuring: in WAL mode a commit on one
+  connection empties the other's page cache, so the worker would lose its 16 MB cache
+  on every write.
+
+kensac checkpoints on a second thread at nice 19; Goose can't set a thread's priority,
+but the lane didn't need it, so it isn't in `docs/goose-findings.md`.
+
 ### Next
 
-Record the board's score for #417. The maintainer scores open pull requests on the
-board's box as they come in, so no hold of our own on a VM is needed.
+Measure `8cfed51`, `b99d2ed`, and `5f54422` on x86-64, with kensac as the reference,
+then open the follow-up pull request from `ring-buffers`.
 
 ## Acceptance criteria
 
@@ -291,4 +363,5 @@ board's box as they come in, so no hold of our own on a VM is needed.
 - [x] The entry passes the challenge's `test/run.sh`, 42 checks (macOS arm64, and
       Linux arm64 in Docker, 2026-11-12)
 - [x] The pull request is open upstream (#417, 2026-11-12)
-- [ ] The board's 5-minute hold for #417, recorded here
+- [x] The board's 5-minute hold for #417, recorded here (115,000 users, 2026-11-13)
+- [ ] The follow-up pull request is open upstream

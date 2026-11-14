@@ -26,7 +26,9 @@ maps owners and needs neither.
 - `check.sh`: the challenge's `test/test.sh`, its 42 checks, against the built entry.
 - `bench.sh plod|kensac VUS SCALE [DURATION]`: one k6 run against a 1-CPU, 2 GB server
   container; prints req/s, p95/p99, µs a request (user, kernel) from the cgroup, and
-  memory peak. `NOFILE` sets the descriptor limit (65,535).
+  memory peak. `NOFILE` sets the descriptor limit (65,535), and `CPUS` the server's
+  CPUs (1): k6 from one container can't saturate a whole CPU, so a test of the server
+  past its capacity holds it to less, such as `CPUS=0.4`.
 - `ab.sh ROUNDS VARIANT...`: `bench.sh plod 4000 20` for each `bins/VARIANT` in turn,
   and each one's lowest µs a request. Copy a build's `bin/server` into `bins/` first.
 - `count.sh VARIANT...`: `io_uring_enter`, `pread64`, `pwrite64`, and context switches
